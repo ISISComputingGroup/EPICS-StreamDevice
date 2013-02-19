@@ -33,7 +33,7 @@ EPICS_BASE=/home/faa59/EPICS/base/3.14.12.2
 #
 ASYN=$(SUPPORT)/asyn/4-18
 PCRE=$(SUPPORT)/pcre
-CALC=$(SUPPORT)/calc/2-9
+#CALC=$(SUPPORT)/calc/2-9
 STREAMDEVICE=$(SUPPORT)/StreamDevice
 
 include $(TOP)/../../ISIS_CONFIG.$(EPICS_HOST_ARCH)
