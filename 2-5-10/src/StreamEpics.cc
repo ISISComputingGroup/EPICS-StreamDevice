@@ -18,9 +18,14 @@
 *                                                              *
 ***************************************************************/
 
+
 #include "StreamCore.h"
+#define epicsExportSharedSymbols
+#include <shareLib.h>
 #include "StreamError.h"
 #include "devStream.h"
+#undef epicsExportSharedSymbols
+#include <shareLib.h>
 
 #ifndef EPICS_3_14
 extern "C" {
@@ -67,7 +72,6 @@ epicsShareFunc int epicsShareAPI iocshCmd(const char *command);
 #endif
 
 #include <epicsExport.h>
-
 #endif
 
 #if defined(__vxworks) || defined(vxWorks)
@@ -237,7 +241,6 @@ extern "C" void streamReloadFunc (const iocshArgBuf *args)
 {
     streamReload(args[0].sval);
 }
-
 static void streamRegistrar ()
 {
     iocshRegister(&reloadDef, streamReloadFunc);
@@ -247,7 +250,6 @@ static void streamRegistrar ()
     registryFunctionAdd("streamReloadSub",
         (REGISTRYFUNCTION)streamReloadSub);
 }
-
 extern "C" {
 epicsExportRegistrar(streamRegistrar);
 }

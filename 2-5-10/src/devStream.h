@@ -21,6 +21,12 @@
 #ifndef devStream_h
 #define devStream_h
 
+#ifdef epicsExportSharedSymbols
+#   define interfacedevStream_epicsExportSharedSymbols
+#   undef epicsExportSharedSymbols
+#   include <shareLib.h>
+#endif /* epicsExportSharedSymbols */
+
 #define STREAM_MAJOR 2
 #define STREAM_MINOR 5
 #define STREAM_PATCHLEVEL 10
@@ -60,6 +66,10 @@ extern "C" {
 }
 #endif
 
+#ifdef interfacedevStream_epicsExportSharedSymbols
+#   define epicsExportSharedSymbols
+#   include <shareLib.h>
+#endif /* interfacedevStream_epicsExportSharedSymbols */
 
 typedef const struct format_s {
     unsigned char type;
@@ -70,23 +80,20 @@ typedef const struct format_s {
 extern "C" {
 #endif
 
-#ifdef _WIN32
-__declspec(dllimport)
-#endif
-extern FILE* StreamDebugFile;
+epicsShareExtern FILE* StreamDebugFile;
 
 extern const char StreamVersion [];
 
 typedef long (*streamIoFunction) (dbCommon*, format_t*);
 
-long streamInit(int after);
-long streamInitRecord(dbCommon *record, struct link *ioLink,
+epicsShareFunc long streamInit(int after);
+epicsShareFunc long streamInitRecord(dbCommon *record, struct link *ioLink,
     streamIoFunction readData, streamIoFunction writeData);
-long streamReport(int interest);
-long streamReadWrite(dbCommon *record);
-long streamGetIointInfo(int cmd, dbCommon *record, IOSCANPVT *ppvt);
-long streamPrintf(dbCommon *record, format_t *format, ...);
-long streamScanfN(dbCommon *record, format_t *format,
+epicsShareFunc long streamReport(int interest);
+epicsShareFunc long streamReadWrite(dbCommon *record);
+epicsShareFunc long streamGetIointInfo(int cmd, dbCommon *record, IOSCANPVT *ppvt);
+epicsShareFunc long streamPrintf(dbCommon *record, format_t *format, ...);
+epicsShareFunc long streamScanfN(dbCommon *record, format_t *format,
     void*, size_t maxStringSize);
 
 /* backward compatibility stuff */

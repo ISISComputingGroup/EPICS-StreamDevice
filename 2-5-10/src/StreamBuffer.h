@@ -58,7 +58,7 @@ public:
         {init(s, size);}
 
     StreamBuffer(const char* s)
-        {init(s, s?strlen(s):0);}
+        {init(s, s?static_cast<long>(strlen(s)):0);}
 
     StreamBuffer(const StreamBuffer& s)
         {init(s.buffer+s.offs, s.len);}
@@ -120,7 +120,7 @@ public:
     StreamBuffer& append(const void* s, long size);
 
     StreamBuffer& append(const char* s)
-        {return append(s, s?strlen(s):0);}
+        {return append(s, s?static_cast<long>(strlen(s)):0);}
 
     StreamBuffer& append(const StreamBuffer& s)
         {return append(s.buffer+s.offs, s.len);}
@@ -140,7 +140,7 @@ public:
         {clear(); return append(s, size);}
 
     StreamBuffer& set(const char* s)
-        {clear(); return append(s, s?strlen(s):0);}
+        {clear(); return append(s, s?static_cast<long>(strlen(s)):0);}
 
     StreamBuffer& set(const StreamBuffer& s)
         {clear(); return append(s.buffer+s.offs, s.len);}
@@ -157,7 +157,7 @@ public:
         long pos, long length, const void* s, long size);
 
     StreamBuffer& replace(long pos, long length, const char* s)
-        {return replace(pos, length, s, s?strlen(s):0);}
+        {return replace(pos, length, s, s?static_cast<long>(strlen(s)):0);}
 
     StreamBuffer& replace(long pos, long length, const StreamBuffer& s)
         {return replace(pos, length, s.buffer+s.offs, s.len);}
@@ -180,7 +180,7 @@ public:
         {return replace(pos, 0, s, size);}
 
     StreamBuffer& insert(long pos, const char* s)
-        {return replace(pos, 0, s, s?strlen(s):0);}
+        {return replace(pos, 0, s, s?static_cast<long>(strlen(s)):0);}
 
     StreamBuffer& insert(long pos, const StreamBuffer& s)
         {return replace(pos, 0, s.buffer+s.offs, s.len);}
@@ -202,7 +202,7 @@ public:
     long find(const void* s, long size, long start=0) const;
 
     long find(const char* s, long start=0) const
-        {return find(s, s?strlen(s):0, start);}
+        {return find(s, s?static_cast<long>(strlen(s)):0, start);}
 
     long int find(const StreamBuffer& s, long start=0) const
         {return find(s.buffer+s.offs, s.len, start);}

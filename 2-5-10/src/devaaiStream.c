@@ -20,10 +20,10 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include "devStream.h"
 #include <aaiRecord.h>
 #include <errlog.h>
 #include <epicsExport.h>
+#include "devStream.h"
 
 static long readData (dbCommon *record, format_t *format)
 {

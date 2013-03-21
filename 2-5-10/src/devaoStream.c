@@ -18,9 +18,9 @@
 *                                                              *
 ***************************************************************/
 
-#include "devStream.h"
 #include <aoRecord.h>
 #include <epicsExport.h>
+#include "devStream.h"
 
 static long readData (dbCommon *record, format_t *format)
 {
