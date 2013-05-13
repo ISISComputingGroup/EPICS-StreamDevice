@@ -47,9 +47,10 @@ ifneq ($(words $(CALC) $(SYNAPPS)), 0)
 # With synApps scalcout record
 streamApp_DBD += calcSupport.dbd
 streamApp_DBD += streamSynApps.dbd
-PROD_LIBS += calc
+PROD_LIBS += calc 
 # older calc versions require sscan
-#PROD_LIBS += sscan
+# we also need to add sscan for static linking
+PROD_LIBS += sscan
 PROD_LIBS_DEFAULT += streamSynApps
 endif
 
@@ -57,6 +58,7 @@ streamApp_DBD += stream.dbd
 
 ifdef PCRE
 LIB_LIBS += pcre
+PROD_LIBS += pcre # needed for static linking
 else
 ifneq ($(words $(PCRE_LIB) $(PCRE_INCLUDE)),0)
 PROD_SYS_LIBS_DEFAULT += pcre
