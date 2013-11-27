@@ -59,6 +59,7 @@ streamApp_DBD += stream.dbd
 ifdef PCRE
 LIB_LIBS += pcre
 PROD_LIBS += pcre # needed for static linking
+PROD_LIBS_WIN32 += streamSynApps oncrpc # need to include streamSynApps as this overrides PROD_LIBS_DEFAULT
 else
 ifneq ($(words $(PCRE_LIB) $(PCRE_INCLUDE)),0)
 PROD_SYS_LIBS_DEFAULT += pcre

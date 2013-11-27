@@ -35,6 +35,7 @@ ASYN=$(SUPPORT)/asyn/4-18
 PCRE=$(SUPPORT)/pcre
 CALC=$(SUPPORT)/calc/2-9
 SSCAN=$(SUPPORT)/sscan/2-8
+ONCRPC=$(SUPPORT)/oncrpc/2
 STREAMDEVICE=$(SUPPORT)/StreamDevice
 
 include $(TOP)/../../ISIS_CONFIG.$(EPICS_HOST_ARCH)
