@@ -18,7 +18,7 @@
 *                                                              *
 ***************************************************************/
 
-
+#include <epicsStdio.h>
 #include "StreamCore.h"
 #define epicsExportSharedSymbols
 #include <shareLib.h>
@@ -915,12 +915,12 @@ getFieldAddress(const char* fieldname, StreamBuffer& address)
     else
     {
         // FIELD in this record or VAL in other record
-        char fullname[2 * PVNAME_SZ + 2];
-        sprintf(fullname, "%s.%s", name(), fieldname);
+        char fullname[2 * PVNAME_SZ + 2]; // both name() and fieldname may be of full PV name length at this point
+        epicsSnprintf(fullname, sizeof(fullname), "%s.%s", name(), fieldname);
         if (dbNameToAddr(fullname, &dbaddr) != OK)
         {
             // VAL in other record
-            sprintf(fullname, "%s.VAL", fieldname);
+            epicsSnprintf(fullname, sizeof(fullname), "%s.VAL", fieldname);
             if (dbNameToAddr(fullname, &dbaddr) != OK) return false;
         }
     }
