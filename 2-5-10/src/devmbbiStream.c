@@ -19,19 +19,21 @@
 *                                                              *
 ***************************************************************/
 
-#include <mbbiRecord.h>
 #include <string.h>
+#include <mbbiRecord.h>
+#include "devStream.h"
 #include <epicsExport.h>
 #include "devStream.h"
 
 static long readData (dbCommon *record, format_t *format)
 {
     mbbiRecord *mbbi = (mbbiRecord *) record;
-    long val;
+    unsigned long val;
     int i;
 
     switch (format->type)
     {
+        case DBF_ULONG:
         case DBF_LONG:
         {
             if (streamScanf (record, format, &val)) return ERROR;

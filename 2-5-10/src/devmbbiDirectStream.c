@@ -20,15 +20,16 @@
 ***************************************************************/
 
 #include <mbbiDirectRecord.h>
+#include "devStream.h"
 #include <epicsExport.h>
 #include "devStream.h"
 
 static long readData (dbCommon *record, format_t *format)
 {
     mbbiDirectRecord *mbbiD = (mbbiDirectRecord *) record;
-    long val;
+    unsigned long val;
 
-    if (format->type == DBF_LONG)
+    if (format->type == DBF_ULONG || format->type == DBF_LONG)
     {
         if (streamScanf (record, format, &val)) return ERROR;
         if (mbbiD->mask)
@@ -40,7 +41,7 @@ static long readData (dbCommon *record, format_t *format)
         else
         {
             /* No MASK, (NOBT = 0): use VAL field */
-            mbbiD->val = (short)val;
+            mbbiD->val = (unsigned short)val;
             return DO_NOT_CONVERT;
         }
     }
@@ -50,9 +51,9 @@ static long readData (dbCommon *record, format_t *format)
 static long writeData (dbCommon *record, format_t *format)
 {
     mbbiDirectRecord *mbbiD = (mbbiDirectRecord *) record;
-    long val;
+    unsigned long val;
 
-    if (format->type == DBF_LONG)
+    if (format->type == DBF_ULONG || format->type == DBF_LONG)
     {
         if (mbbiD->mask) val = mbbiD->rval & mbbiD->mask;
         else val = mbbiD->val;

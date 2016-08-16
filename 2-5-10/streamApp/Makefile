@@ -29,18 +29,13 @@ PROD_SRCS_vxWorks = -nil-
 PROD_LIBS = stream
 
 ifdef ASYN
-# Which types of asyn busses do you have?
-
-# asynDriver up to version 4-16 does not support serial port for Windows!
-#ifneq ($(OS_CLASS), WIN32)
-streamApp_DBD += drvAsynSerialPort.dbd
-#endif
-
-streamApp_DBD += drvAsynIPPort.dbd
-#streamApp_DBD += drvGsIP488.dbd
-#streamApp_DBD += drvNi1014.dbd
-streamApp_DBD += drvVxi11.dbd
+# edit asynRegistrars.dbd if necessary
+streamApp_DBD += asynRegistrars.dbd
+# add asynRecord.dbd if you like
+streamApp_DBD += asynRecord.dbd
 PROD_LIBS += asyn
+# cygwin needs separate RPC library for asyn
+PROD_SYS_LIBS_cygwin32 += $(CYGWIN_RPC_LIB)
 endif
 
 ifneq ($(words $(CALC) $(SYNAPPS)), 0)
@@ -57,9 +52,9 @@ endif
 streamApp_DBD += stream.dbd
 
 ifdef PCRE
-LIB_LIBS += pcre
-PROD_LIBS += pcre # needed for static linking
-PROD_LIBS_WIN32 += streamSynApps oncrpc # need to include streamSynApps as this overrides PROD_LIBS_DEFAULT
+#LIB_LIBS += pcre
+#PROD_LIBS_WIN32 += streamSynApps oncrpc # need to include streamSynApps as this overrides PROD_LIBS_DEFAULT
+PROD_LIBS += pcre
 else
 ifneq ($(words $(PCRE_LIB) $(PCRE_INCLUDE)),0)
 PROD_SYS_LIBS_DEFAULT += pcre
@@ -76,7 +71,11 @@ CPPFLAGS += -DDEBUGFILE=StreamDebug.log
 
 include $(TOP)/configure/RULES
 
+ifeq ($(BASE_3_14), YES)
 clean:: myclean
+else
+clean: myclean
+endif
 
 myclean:
 	$(RM) core* StreamDebug.log
