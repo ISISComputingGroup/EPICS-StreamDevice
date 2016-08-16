@@ -18,7 +18,7 @@ proc createTerm {sock} {
 }
 
 proc connect {sock addr port} {
-    fconfigure $sock -blocking 0 -buffering none
+    fconfigure $sock -blocking 0 -buffering none -translation binary
     createTerm $sock
     fileevent $sock readable "receiveHandler $sock"
 }
@@ -40,11 +40,13 @@ proc escape {string} {
 }
 
 proc sendReply {sock text} {
-    .$sock.t mark set insert end
-    .$sock.t insert end $text
-    .$sock.t see end
-    puts -nonewline $sock $text
-#    puts "sending \"[escape $text]\"\n" 
+    catch {
+        # ignore that socket may already be closed
+        .$sock.t mark set insert end
+        .$sock.t insert end $text
+        .$sock.t see end
+        puts -nonewline $sock $text
+    }
 }
 
 proc checkNum {n} {
@@ -89,7 +91,7 @@ proc receiveHandler {sock} {
             "start" {
                 set wait [checkNum [lindex $l 1]]
                 set ::counter 0
-                after $wait sendAsync $wait [list [lrange $l 2 end-1]]
+                after $wait [list sendAsync $wait "[string range $a [string wordend $a 7] end]"]
                 sendReply $sock "Started\n"
             }
             "stop" {
@@ -131,17 +133,9 @@ proc receiveHandler {sock} {
 proc sendAsync {wait message} {
     if {$::counter < 0} return
     foreach term [array names ::socket] {
-        sendReply $::socket($term) "Message number [incr ::counter] $message\n";
+        sendReply $::socket($term) "Message number [incr ::counter]$message";
     }
     after $wait sendAsync $wait [list $message]
-}
-
-proc sendAsyncX {wait} {
-    if {$::counter < 0} return
-    foreach term [array names ::socket] {
-        sendReply $::socket($term) "\u00101\u0004~\u0005~\u00100\u0002|0062|2|1|0|1216|0|0.1087E+0 \u0003\u0012"
-    }
-    after $wait sendAsyncX $wait
 }
 
 if {[info proc tkTextInsert] != ""} {
@@ -196,7 +190,7 @@ for {set ascii 0x61} {$ascii <= 0x7a} {incr ascii} {
     bind Text <Control-[format %c $ascii]> ""
 }
 #remove bindings on symbolic tags
-foreach tag {Clear Paste Copy Cut } {
+foreach tag {Clear Paste Copy Cut} {
     bind Text <<$tag>> ""
 }
 
