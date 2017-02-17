@@ -19,19 +19,21 @@
 *                                                              *
 ***************************************************************/
 
-#include <mbboRecord.h>
 #include <string.h>
+#include <mbboRecord.h>
+#include "devStream.h"
 #include <epicsExport.h>
 #include "devStream.h"
 
 static long readData (dbCommon *record, format_t *format)
 {
     mbboRecord *mbbo = (mbboRecord *) record;
-    long val;
+    unsigned long val;
     int i;
 
     switch (format->type)
     {
+        case DBF_ULONG:
         case DBF_LONG:
         {
             if (streamScanf (record, format, &val)) return ERROR;
@@ -76,11 +78,12 @@ static long readData (dbCommon *record, format_t *format)
 static long writeData (dbCommon *record, format_t *format)
 {
     mbboRecord *mbbo = (mbboRecord *) record;
-    long val;
+    unsigned long val;
     int i;
 
     switch (format->type)
     {
+        case DBF_ULONG:
         case DBF_LONG:
         {
             /* print VAL or RVAL ? */
