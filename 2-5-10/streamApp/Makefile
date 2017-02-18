@@ -53,7 +53,7 @@ streamApp_DBD += stream.dbd
 
 ifdef PCRE
 #LIB_LIBS += pcre
-#PROD_LIBS_WIN32 += streamSynApps oncrpc # need to include streamSynApps as this overrides PROD_LIBS_DEFAULT
+PROD_LIBS_WIN32 += streamSynApps oncrpc # need to include streamSynApps as this overrides PROD_LIBS_DEFAULT
 PROD_LIBS += pcre
 else
 ifneq ($(words $(PCRE_LIB) $(PCRE_INCLUDE)),0)
