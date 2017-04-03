@@ -89,13 +89,15 @@ void StreamVError(int line, const char* file, const char* fmt, va_list args)
 #endif
 //    fprintf(stderr, "\033[31;1m");
 //    fprintf(stderr, "%s ", timestamp);
+    errlogPrintf("%s ", timestamp);
     if (file)
     {
-        fprintf(stderr, "%s line %d: ", file, line);
+//        fprintf(stderr, "%s line %d: ", file, line);
+        errlogPrintf("%s line %d: ", file, line);
     }
-    errlogVprintf(fmt, args);
 //    vfprintf(stderr, fmt, args);
 //    fprintf(stderr, "\033[0m");
+    errlogVprintf(fmt, args);
 }
 
 int StreamDebugClass::
