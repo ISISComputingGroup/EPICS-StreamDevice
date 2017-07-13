@@ -13,7 +13,7 @@ include $(TOP)/configure/CONFIG
 
 #HOST_OPT = NO
 
-PROD = streamApp
+PROD = streamApp checkProtocol
 DBD  = streamApp.dbd
 
 streamApp_DBD += base.dbd
@@ -22,11 +22,14 @@ streamApp_DBD += base.dbd
 # In earlier versions, these records are buggy and not included by default
 #streamApp_DBD += aaiRecord.dbd aaoRecord.dbd
 
-PROD_SRCS += streamApp_registerRecordDeviceDriver.cpp
-PROD_SRCS_DEFAULT = streamAppMain.cc
-PROD_SRCS_vxWorks = -nil-
+streamApp_SRCS += streamApp_registerRecordDeviceDriver.cpp
+streamApp_SRCS_DEFAULT = streamAppMain.cc
+streamApp_SRCS_vxWorks = -nil-
 
-PROD_LIBS = stream
+checkProtocol_SRCS += checkProtocol.cc
+checkProtocol_CPPFLAGS += -I$(TOP)/2-5-10/src
+
+PROD_LIBS += stream
 
 ifdef ASYN
 # edit asynRegistrars.dbd if necessary
@@ -42,18 +45,19 @@ ifneq ($(words $(CALC) $(SYNAPPS)), 0)
 # With synApps scalcout record
 streamApp_DBD += calcSupport.dbd
 streamApp_DBD += streamSynApps.dbd
-PROD_LIBS += calc 
+streamApp_LIBS += calc 
 # older calc versions require sscan
 # we also need to add sscan for static linking
-PROD_LIBS += sscan
-PROD_LIBS_DEFAULT += streamSynApps
+streamApp_LIBS += sscan
+streamApp_LIBS_DEFAULT += streamSynApps
 endif
 
 streamApp_DBD += stream.dbd
 
 ifdef PCRE
 #LIB_LIBS += pcre
-PROD_LIBS_WIN32 += streamSynApps oncrpc # need to include streamSynApps as this overrides PROD_LIBS_DEFAULT
+streamApp_LIBS_WIN32 += streamSynApps # need to include streamSynApps as this overrides PROD_LIBS_DEFAULT
+PROD_LIBS += oncrpc
 PROD_LIBS += pcre
 else
 ifneq ($(words $(PCRE_LIB) $(PCRE_INCLUDE)),0)

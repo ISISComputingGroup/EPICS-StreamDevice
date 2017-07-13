@@ -18,10 +18,11 @@
 *                                                              *
 ***************************************************************/
 
-#include "StreamCore.h"
-#include "StreamError.h"
 #include <ctype.h>
 #include <stdlib.h>
+#include <epicsExport.h>
+#include "StreamCore.h"
+#include "StreamError.h"
 
 #define P PRINTF_SIZE_T_PREFIX
 

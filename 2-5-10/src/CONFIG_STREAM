@@ -77,6 +77,7 @@ STREAM_SRCS += StreamVersion.c
 STREAM_SRCS += StreamBuffer.cc
 STREAM_SRCS += StreamError.cc
 STREAM_SRCS += StreamProtocol.cc
+STREAM_SRCS += StreamCheckProtocol.cc
 STREAM_SRCS += StreamFormatConverter.cc
 STREAM_SRCS += StreamCore.cc
 STREAM_SRCS += StreamBusInterface.cc
