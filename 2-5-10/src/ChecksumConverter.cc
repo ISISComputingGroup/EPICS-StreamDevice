@@ -81,17 +81,11 @@ static unsigned int julich(const unsigned char* data, unsigned int len, unsigned
 	
 	if(original_len == zeroes)
 	{
-		return 0;
+		sum = 0;
 	}
-	else
-	{
 		
-
-		sprintf(&res[0], "%02X", sum);
-
-		return res[1] + res[0]*256;
-		
-	}
+	sprintf(&res[0], "%02X", sum);
+	return res[1] + res[0]*256;
 }
 
 static unsigned int xor8(const unsigned char* data, unsigned int len, unsigned int sum)
