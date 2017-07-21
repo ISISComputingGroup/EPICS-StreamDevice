@@ -91,8 +91,6 @@ static unsigned int julich(const unsigned char* data, unsigned int len, unsigned
 	// Only care about least significant 2 nibbles (1 nibble = 4 bits = 1 hex character)
 	int sum_modulo_256 = sum % 256;
 	
-	printf("The sum is %i\n", sum);
-	printf("The sum modulo FF is %i\n", sum_modulo_256);
 	sprintf(&res[0], "%02X", sum_modulo_256);
 	return res[1] + res[0]*256;
 }
