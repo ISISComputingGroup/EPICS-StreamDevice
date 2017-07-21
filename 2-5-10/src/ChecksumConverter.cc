@@ -54,12 +54,13 @@ static unsigned int julich(const unsigned char* data, unsigned int len, unsigned
 {
 	
 	int original_len = len;
-	int zeroes = 0;
-	char res[3]; /* two bytes of hex = 4 characters, plus NULL terminator */
+	int zeroes_or_hashes = 0;
+	char res[3]; /* two bytes of hex = 2 characters, plus NULL terminator */
 	
     while (len--)
     {
-		if(*data == '0') { zeroes++;  sum += 0x30;}
+		if(*data == '#') { zeroes_or_hashes++;  sum += 0x23;}
+		if(*data == '0') { zeroes_or_hashes++;  sum += 0x30;}
 		if(*data == '1') sum += 0x31;
 		if(*data == '2') sum += 0x32;
 		if(*data == '3') sum += 0x33;
@@ -75,16 +76,24 @@ static unsigned int julich(const unsigned char* data, unsigned int len, unsigned
 		if(*data == 'D') sum += 0x44;
 		if(*data == 'E') sum += 0x45;
 		if(*data == 'F') sum += 0x46;
+		// Annoyingly the MERLIN fermi also has 'G' and 'H' as "hex" characters...
+		if(*data == 'G') sum += 0x47;
+		if(*data == 'H') sum += 0x48;
 		
 		data++;
     }
 	
-	if(original_len == zeroes)
+	if(original_len == zeroes_or_hashes)
 	{
 		sum = 0;
 	}
-		
-	sprintf(&res[0], "%02X", sum);
+	
+	// Only care about least significant 2 nibbles (1 nibble = 4 bits = 1 hex character)
+	int sum_modulo_256 = sum % 256;
+	
+	printf("The sum is %i\n", sum);
+	printf("The sum modulo FF is %i\n", sum_modulo_256);
+	sprintf(&res[0], "%02X", sum_modulo_256);
 	return res[1] + res[0]*256;
 }
 
