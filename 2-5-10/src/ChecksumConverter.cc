@@ -50,6 +50,51 @@ static unsigned int sum(const unsigned char* data, unsigned int len, unsigned in
     return sum;
 }
 
+static unsigned int julich(const unsigned char* data, unsigned int len, unsigned int sum)
+{
+	
+	int original_len = len;
+	int zeroes_or_hashes = 0;
+	char res[3]; /* two bytes of hex = 2 characters, plus NULL terminator */
+	
+    while (len--)
+    {
+		if(*data == '#') { zeroes_or_hashes++;  sum += 0x23;}
+		if(*data == '0') { zeroes_or_hashes++;  sum += 0x30;}
+		if(*data == '1') sum += 0x31;
+		if(*data == '2') sum += 0x32;
+		if(*data == '3') sum += 0x33;
+		if(*data == '4') sum += 0x34;
+		if(*data == '5') sum += 0x35;
+		if(*data == '6') sum += 0x36;
+		if(*data == '7') sum += 0x37;
+		if(*data == '8') sum += 0x38;
+		if(*data == '9') sum += 0x39;
+		if(*data == 'A') sum += 0x41;
+		if(*data == 'B') sum += 0x42;
+		if(*data == 'C') sum += 0x43;
+		if(*data == 'D') sum += 0x44;
+		if(*data == 'E') sum += 0x45;
+		if(*data == 'F') sum += 0x46;
+		// Annoyingly the MERLIN fermi also has 'G' and 'H' as "hex" characters...
+		if(*data == 'G') sum += 0x47;
+		if(*data == 'H') sum += 0x48;
+		
+		data++;
+    }
+	
+	if(original_len == zeroes_or_hashes)
+	{
+		sum = 0;
+	}
+	
+	// Only care about least significant 2 nibbles (1 nibble = 4 bits = 1 hex character)
+	int sum_modulo_256 = sum % 256;
+	
+	sprintf(&res[0], "%02X", sum_modulo_256);
+	return res[1] + res[0]*256;
+}
+
 static unsigned int xor8(const unsigned char* data, unsigned int len, unsigned int sum)
 {
     while (len--)
@@ -491,7 +536,8 @@ static checksum checksumMap[] =
     {"crc32r",  crc_0x04C11DB7_r, 0xFFFFFFFF, 0xFFFFFFFF, 4}, // 0xCBF43926
     {"jamcrc",  crc_0x04C11DB7_r, 0xFFFFFFFF, 0x00000000, 4}, // 0x340BC6D9
     {"adler32", adler32,          0x00000001, 0x00000000, 4}, // 0x091E01DE
-    {"hexsum8", hexsum,           0x00,       0x00,       1}  // 0x2D
+    {"hexsum8", hexsum,           0x00,       0x00,       1}, // 0x2D
+	{"julich",  julich,           0x00,       0x00,       2}  // 0x2D
 };
 
 static unsigned int mask[5] = {0, 0xFF, 0xFFFF, 0xFFFFFF, 0xFFFFFFFF};
