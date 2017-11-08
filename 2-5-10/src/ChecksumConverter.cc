@@ -38,6 +38,7 @@ static int strncasecmp(const char *s1, const char *s2, size_t n)
 #endif
 #endif
 #include <ctype.h>
+#include <inttypes.h>
 
 typedef unsigned int (*checksumFunc)(const unsigned char* data, unsigned int len,  unsigned int init);
 
@@ -102,8 +103,8 @@ static unsigned int julich(const unsigned char* data, unsigned int len, unsigned
  */
 static unsigned int skf_modbus(const unsigned char* data, unsigned int len, unsigned int sum)
 {
-	int i; /* Count through bitshifts */
-	uint16_t CRC_16 = 0xa001;
+    int i; /* Count through bitshifts */
+    uint16_t CRC_16 = 0xa001;
     uint16_t crc = 0xffff; /* Initalize crc to 0xffff for modbus */
     while (len--) {
         crc ^= *data++; 
@@ -557,7 +558,7 @@ static checksum checksumMap[] =
     {"jamcrc",  crc_0x04C11DB7_r, 0xFFFFFFFF, 0x00000000, 4}, // 0x340BC6D9
     {"adler32", adler32,          0x00000001, 0x00000000, 4}, // 0x091E01DE
     {"hexsum8", hexsum,           0x00,       0x00,       1}, // 0x2D
-	{"julich",  julich,           0x00,       0x00,       2}  // 0x2D
+	{"julich",  julich,           0x00,       0x00,       2}, // 0x2D
 	{"skf_modbus",  skf_modbus,   0x00,       0x00,       2}  
 };
 
