@@ -95,6 +95,26 @@ static unsigned int julich(const unsigned char* data, unsigned int len, unsigned
 	return res[1] + res[0]*256;
 }
 
+/**
+ *  Checksum function for the SKF MB350PC chopper.
+ *
+ *  Code is taken directly from appendix A of the manual, modified very slightly to make it work in stream device.
+ */
+static unsigned int skf_modbus(const unsigned char* data, unsigned int len, unsigned int sum)
+{
+	int i; /* Count through bitshifts */
+	uint16_t CRC_16 = 0xa001;
+    uint16_t crc = 0xffff; /* Initalize crc to 0xffff for modbus */
+    while (len--) {
+        crc ^= *data++; 
+        i = 8;
+        do {
+            crc = (uint16_t)((crc & 1) ? crc >> 1 ^ CRC_16 : crc >> 1);
+        } while (--i);
+    }
+    return crc; 
+}
+
 static unsigned int xor8(const unsigned char* data, unsigned int len, unsigned int sum)
 {
     while (len--)
@@ -538,6 +558,7 @@ static checksum checksumMap[] =
     {"adler32", adler32,          0x00000001, 0x00000000, 4}, // 0x091E01DE
     {"hexsum8", hexsum,           0x00,       0x00,       1}, // 0x2D
 	{"julich",  julich,           0x00,       0x00,       2}  // 0x2D
+	{"skf_modbus",  skf_modbus,   0x00,       0x00,       2}  
 };
 
 static unsigned int mask[5] = {0, 0xFF, 0xFFFF, 0xFFFFFF, 0xFFFFFFFF};
