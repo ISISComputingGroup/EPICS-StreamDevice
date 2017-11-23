@@ -559,7 +559,7 @@ static checksum checksumMap[] =
     {"adler32", adler32,          0x00000001, 0x00000000, 4}, // 0x091E01DE
     {"hexsum8", hexsum,           0x00,       0x00,       1}, // 0x2D
 	{"julich",  julich,           0x00,       0x00,       2}, // 0x2D
-	{"skf_modbus",  skf_modbus,   0x00,       0x00,       2}  
+	{"skf_modbus",  skf_modbus,   0x00,       0x00,       2}  // 0x374B
 };
 
 static unsigned int mask[5] = {0, 0xFF, 0xFFFF, 0xFFFFFF, 0xFFFFFFFF};
