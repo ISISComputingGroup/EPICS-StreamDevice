@@ -38,7 +38,7 @@ static int strncasecmp(const char *s1, const char *s2, size_t n)
 #endif
 #endif
 #include <ctype.h>
-#include <inttypes.h>
+#include <stdint.h>
 
 typedef unsigned int (*checksumFunc)(const unsigned char* data, unsigned int len,  unsigned int init);
 
