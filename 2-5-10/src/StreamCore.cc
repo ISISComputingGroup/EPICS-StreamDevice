@@ -1109,9 +1109,13 @@ readCallback(StreamIoStatus status,
         }
         else
         {
-            error("%s: Timeout after reading %ld byte%s \"%s%s\"\n",
-                name(), end, end==1 ? "" : "s", end > 20 ? "..." : "",
-                inputBuffer.expand(-20)());
+			// Don't continually print errors if we keen having the same mismatch
+			if (!inputBuffer.startswith(previousMismatch())) 
+			{
+				error("%s: Timeout after reading %ld byte%s \"%s%s\"\n",
+					name(), end, end==1 ? "" : "s", end > 20 ? "..." : "",
+					inputBuffer.expand(-20)());
+			}
         }
     }
 
@@ -1130,7 +1134,7 @@ readCallback(StreamIoStatus status,
     {
         unparsedInput = false;
     }
-	previousMismatch = !matches;
+
     if (!matches)
     {
 		previousMismatch = inputLine;
@@ -1154,6 +1158,12 @@ readCallback(StreamIoStatus status,
         finishProtocol(ScanError);
         return 0;
     }
+
+	if (previousMismatch)
+	{
+		error("%s: Match passed again\n",
+            name());
+	}
 
 	previousMismatch = StreamBuffer();
 
