@@ -170,6 +170,8 @@ protected:
     StreamIoStatus lastInputStatus;
     bool unparsedInput;
 
+	StreamBuffer previousMismatch; // the command we previously mismatched on, used to reduce logging
+
     StreamCore(const StreamCore&); // undefined
     bool compile(StreamProtocolParser::Protocol*);
     bool evalCommand();
@@ -181,6 +183,8 @@ protected:
     bool evalConnect();
     bool evalDisconnect();
     bool formatOutput();
+
+	void printMismatchError(const char* fmt, ...);
     bool matchInput();
     bool matchSeparator();
     void printSeparator();
