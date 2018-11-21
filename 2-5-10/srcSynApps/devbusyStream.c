@@ -88,6 +88,7 @@ static long writeData (dbCommon *record, format_t *format)
                 br->val ? br->onam : br->znam);
         }
     }
+    printf("Called busyWritedata\n");
     if (ret != ERROR)
     {
         br->val = 0;
