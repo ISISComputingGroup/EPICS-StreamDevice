@@ -4,6 +4,7 @@ ONCRPC=$(SUPPORT)/oncrpc/master
 CALC=$(SUPPORT)/calc/master
 PCRE=$(SUPPORT)/pcre/master
 SSCAN=$(SUPPORT)/sscan/master
+BUSY=$(SUPPORT)/busy/master
 # END OF AUTO GENERATED DEPENDENCIES
 
 # optional extra local definitions here

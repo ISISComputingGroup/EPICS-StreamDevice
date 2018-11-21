@@ -23,7 +23,7 @@ RECORDS += aai aao
 # modules before building 'calc'.
 # See doc/scalcout.html for a required fix in scalcout.
 
-SYNAPPS_RECORDS += scalcout
+SYNAPPS_RECORDS += scalcout busy
 
 # You may add more bus interfaces
 # This requires the naming convention
