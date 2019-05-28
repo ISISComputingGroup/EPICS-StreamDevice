@@ -107,7 +107,7 @@ scanPseudo(const StreamFormat& format, StreamBuffer& input, long& cursor)
 // Convert Checksum
     n = ((input[-2] - '0') << 4) + (input[-1] - '0');
     input.truncate(-2);
-    input.printf("%02X", n);
+    input.print("%02X", n);
 
 // strip off checksum
     if (format.flags & skip_flag)
