@@ -1,19 +1,26 @@
-#Makefile at top of application tree
-TOP = .
-include $(TOP)/configure/CONFIG
-DIRS := $(DIRS) $(filter-out $(DIRS), configure)
-DIRS := $(DIRS) $(filter-out $(DIRS), $(wildcard *App))
-DIRS := $(DIRS) $(filter-out $(DIRS), $(wildcard iocBoot))
+TOP = ..
+ifneq ($(wildcard ../configure),)
+  # We are in an EPICS R3.14+ <TOP> location
+  include $(TOP)/configure/CONFIG
+else ifneq ($(wildcard ../config),)
+  # We are in an EPICS R3.13 <TOP> location
+  CONFIG = $(TOP)/config
+  include $(TOP)/config/CONFIG_APP
+else
+  # Using our own local configuration
+  TOP = .
+  DIRS = configure
+  src_DEPEND_DIRS := $(DIRS)
+  include $(TOP)/configure/CONFIG
+endif
 
-DIRS := $(DIRS) 2-5-10
+DIRS += src
+DIRS += streamApp
+streamApp_DEPEND_DIRS = src
 
-define DIR_template
- $(1)_DEPEND_DIRS = configure
-endef
-$(foreach dir, $(filter-out configure,$(DIRS)),$(eval $(call DIR_template,$(dir))))
+include $(CONFIG)/RULES_TOP
 
-iocBoot_DEPEND_DIRS += $(filter %App,$(DIRS))
+docs/stream.pdf: docs/*.html docs/*.css docs/*.png
+	cd docs; makepdf
 
-include $(TOP)/configure/RULES_TOP
-
-
+pdf: docs/stream.pdf
