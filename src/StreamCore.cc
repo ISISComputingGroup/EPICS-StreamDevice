@@ -1168,7 +1168,6 @@ matchInput()
 	   @mismatch handler is installed and starts with 'in' (then we reparse the input).
 	   We have previously mismatched the same output (to limit repeating errors)
     */
-	bool printErrors = (!(flags & AsyncMode) && onMismatch[0] != in_cmd && !inputLine.startswith(previousMismatch()));
 
     char command;
     const char* fieldName = NULL;
@@ -1801,27 +1800,6 @@ printStatus(StreamBuffer& buffer)
     if (flags & WritePending)     buffer.append(" WritePending");
     if (flags & WaitPending)      buffer.append(" WaitPending");
     if (flags & Aborted)          buffer.append(" Aborted");
-    busPrintStatus(buffer);
-}
-
-void StreamCore::
-printStatus(StreamBuffer& buffer)
-{
-    buffer.print("active command=%s ",
-        activeCommand ? commandName(*activeCommand) : "NULL");
-    buffer.print("flags=0x%04lx ", flags);
-    if (flags & IgnoreExtraInput) buffer.append("IgnoreExtraInput ");
-    if (flags & InitRun) buffer.append("InitRun ");
-    if (flags & AsyncMode) buffer.append("AsyncMode ");
-    if (flags & GotValue) buffer.append("GotValue ");
-    if (flags & BusOwner) buffer.append("BusOwner ");
-    if (flags & Separator) buffer.append("Separator ");
-    if (flags & ScanTried) buffer.append("ScanTried ");
-    if (flags & AcceptInput) buffer.append("AcceptInput ");
-    if (flags & AcceptEvent) buffer.append("AcceptEvent ");
-    if (flags & LockPending) buffer.append("LockPending ");
-    if (flags & WritePending) buffer.append("WritePending ");
-    if (flags & WaitPending) buffer.append("WaitPending ");
     busPrintStatus(buffer);
 }
 

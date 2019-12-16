@@ -327,7 +327,6 @@ struct drvet stream = {
 extern "C" {
 epicsExportAddress(drvet, stream);
 }
-#endif
 
 #ifdef EPICS_3_13
 void streamEpicsPrintTimestamp(char* buffer, size_t size)

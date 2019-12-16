@@ -33,10 +33,6 @@
 #include <assert.h>
 #include <wdLib.h>
 #include <sysLib.h>
-#else
-#include <epicsAssert.h>
-#include <epicsTime.h>
-#include <epicsTimer.h>
 extern "C" {
 #include "callback.h"
 }
@@ -513,21 +509,6 @@ connectToBus(const char* portname, int addr)
         // (read only one byte first).
         peeksize = inputBuffer.capacity();
     }
-    return true;
-}
-
-    // Install callback for connect/disconnect events
-    status = pasynManager->exceptionCallbackAdd(pasynUser, exceptionHandler);
-    if (status != asynSuccess)
-    {
-        debug("%s: warning: Cannot install exception handler: %s\n",
-            clientName(), pasynUser->errorMessage);
-        // No problem, only @connect handler will not work
-    }
-    pasynManager->isConnected(pasynUser, &connected);
-    debug("%s: AsynDriverInterface::connectToBus(%s, %d): device is now %s\n",
-        clientName(), portname, addr, connected ? "connected" : "disconnected");
-
     return true;
 }
 

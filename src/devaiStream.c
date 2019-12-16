@@ -83,15 +83,6 @@ static long writeData(dbCommon *record, format_t *format)
             }
             return streamPrintf(record, format, (unsigned long)ai->rval);
         }
-        case DBF_ULONG:
-        {
-            if (ai->linr == menuConvertNO_CONVERSION)
-            {
-                /* allow more bits than 32 */
-                return streamPrintf (record, format, (unsigned long)ai->val);
-            }
-            return streamPrintf (record, format, (unsigned long)ai->rval);
-        }
         case DBF_LONG:
         {
             if (ai->linr == 0)
