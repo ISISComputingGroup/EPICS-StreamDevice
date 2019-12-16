@@ -28,11 +28,6 @@
 
 int streamDebug = 0;
 int streamError = 1;
-// Strictly we should use    defined(EPICS_BUILD_DLL)    here
-// however we can use   defined(_DLL)    in    
-#if defined(_WIN32) && defined(_DLL)
-__declspec(dllexport)
-#endif
 FILE *StreamDebugFile = NULL;
 
 #ifndef va_copy
