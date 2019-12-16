@@ -590,7 +590,6 @@ long streamReadWrite(dbCommon *record)
     if (!stream || stream->status == ERROR)
     {
         (void) recGblSetSevr(record, UDF_ALARM, INVALID_ALARM);
-        error("%s: Record not initialised correctly\n", record->name);
         return ERROR;
     }
     return stream->process() ? stream->convert : ERROR;
@@ -1103,7 +1102,7 @@ getFieldAddress(const char* fieldname, StreamBuffer& address)
 }
 
 static const unsigned char dbfMapping[] =
-#ifdef DBF_INT64
+#ifdef DBR_INT64
     {0, DBF_UINT64, DBF_INT64, DBF_ENUM, DBF_DOUBLE, DBF_STRING};
 #else
     {0, DBF_ULONG, DBF_LONG, DBF_ENUM, DBF_DOUBLE, DBF_STRING};
