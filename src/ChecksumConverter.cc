@@ -504,6 +504,18 @@ static uint32_t leybold(const uint8_t* data, size_t len, uint32_t sum)
     return sum;
 }
 
+// Checksum used by Brooks Cryopumps
+static uint32_t brksCryo(const uint8_t* data, size_t len, uint32_t sum)
+{
+    uint32_t xsum;
+    while (len--)  {
+        sum += (*data++) & 0x7F;
+    }
+    xsum = (((sum >> 6) ^ sum) & 0x3F) + 0x30;
+    return xsum;
+}
+
+
 struct checksum
 {
     const char* name;
@@ -521,8 +533,13 @@ static checksum checksumMap[] =
     {"sum8",    sum,              0x00,       0x00,       1}, // 0xDD
     {"sum16",   sum,              0x0000,     0x0000,     2}, // 0x01DD
     {"sum32",   sum,              0x00000000, 0x00000000, 4}, // 0x000001DD
+    {"nsum8",   sum,              0xFF,       0xFF,       1}, // 0x23
+    {"nsum16",  sum,              0xFFFF,     0xFFFF,     2}, // 0xFE23
+    {"nsum32",  sum,              0xFFFFFFFF, 0xFFFFFFFF, 4}, // 0xFFFFFE23
+    {"notsum",  sum,              0x00,       0xFF,       1}, // 0x22
     {"xor",     xor8,             0x00,       0x00,       1}, // 0x31
     {"xor8",    xor8,             0x00,       0x00,       1}, // 0x31
+    {"xor8ff",  xor8,             0x00,       0xFF,       1}, // 0xCE
     {"xor7",    xor7,             0x00,       0x00,       1}, // 0x31
     {"crc8",    crc_0x07,         0x00,       0x00,       1}, // 0xF4
     {"ccitt8",  crc_0x31,         0x00,       0x00,       1}, // 0xA1
@@ -541,6 +558,7 @@ static checksum checksumMap[] =
     {"hexsum8", hexsum,           0x00,       0x00,       1}, // 0x2D
     {"cpi",     CPI,              0x00,       0x00,       1}, // 0x7E
     {"leybold", leybold,          0x00,       0x00,       1}, // 0x22
+    {"brksCryo",brksCryo,         0x00,       0x00,       1}  // 0x4A
 };
 
 static uint32_t mask[5] = {0, 0xFF, 0xFFFF, 0xFFFFFF, 0xFFFFFFFF};
@@ -706,13 +724,14 @@ scanPseudo(const StreamFormat& format, StreamBuffer& input, size_t& cursor)
     debug("ChecksumConverter %s: input to check: \"%s\n",
         checksumMap[fnum].name, input.expand(start,length)());
 
-    uint_fast8_t expectedLength =
+    uint_fast8_t nDigits =
         // get number of decimal digits from number of bytes: ceil(bytes*2.5)
         format.flags & sign_flag ? (checksumMap[fnum].bytes + 1) * 25 / 10 - 2 :
         format.flags & (zero_flag|left_flag) ? 2 * checksumMap[fnum].bytes :
         checksumMap[fnum].bytes;
+    ssize_t expectedLength = nDigits;
 
-    if (input.length() - cursor < expectedLength)
+    if ((ssize_t)( input.length() - cursor ) < expectedLength)
     {
         debug("ChecksumConverter %s: Input '%s' too short for checksum\n",
             checksumMap[fnum].name, input.expand(cursor)());
@@ -731,7 +750,7 @@ scanPseudo(const StreamFormat& format, StreamBuffer& input, size_t& cursor)
     if (format.flags & sign_flag) // decimal
     {
         uint32_t sumin = 0;
-        size_t i;
+        ssize_t i;
         for (i = 0; i < expectedLength; i++)
         {
             inchar = input[cursor+i];
@@ -753,7 +772,7 @@ scanPseudo(const StreamFormat& format, StreamBuffer& input, size_t& cursor)
         {
             if (format.flags & zero_flag) // ASCII
             {
-                if (sscanf(input(cursor+2*i), "%2" SCNx8, &inchar) != 1)
+                if (sscanf(input(cursor+2*i), "%2" SCNx8, (int8_t *) &inchar) != 1)
                 {
                     debug("ChecksumConverter %s: Input byte '%s' is not a hex byte\n",
                         checksumMap[fnum].name, input.expand(cursor+2*i,2)());
@@ -797,7 +816,7 @@ scanPseudo(const StreamFormat& format, StreamBuffer& input, size_t& cursor)
         {
             if (format.flags & zero_flag) // ASCII
             {
-                sscanf(input(cursor+2*i), "%2" SCNx8, &inchar);
+                sscanf(input(cursor+2*i), "%2" SCNx8, (int8_t *) &inchar);
             }
             else
             if (format.flags & left_flag) // poor man's hex: 0x30 - 0x3F
