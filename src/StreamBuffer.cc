@@ -73,8 +73,6 @@ int vsnprintf(char *str, size_t size, const char *format, va_list ap) {
 
 #define P PRINTF_SIZE_T_PREFIX
 
-#define P PRINTF_SIZE_T_PREFIX
-
 void StreamBuffer::
 init(const void* s, ssize_t minsize)
 {

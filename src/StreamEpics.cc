@@ -80,10 +80,6 @@ extern "C" epicsShareFunc int epicsShareAPI iocshCmd(const char *command);
 
 #endif // !EPICS_3_13
 
-#include "devStream.h"
-#include "StreamCore.h"
-#include "StreamError.h"
-
 #if defined(__vxworks) || defined(vxWorks)
 #include <symLib.h>
 #include <sysSymTbl.h>
@@ -310,6 +306,7 @@ static void streamRegistrar ()
     registryFunctionAdd("streamReloadSub",
         (REGISTRYFUNCTION)streamReloadSub);
 }
+
 extern "C" {
 epicsExportRegistrar(streamRegistrar);
 }
