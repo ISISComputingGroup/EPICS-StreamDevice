@@ -515,6 +515,70 @@ static uint32_t brksCryo(const uint8_t* data, size_t len, uint32_t sum)
     return xsum;
 }
 
+static uint32_t julich(const uint8_t* data, size_t len, uint32_t sum)
+{
+	int original_len = len;
+	int zeroes_or_hashes = 0;
+	char res[3]; /* two bytes of hex = 2 characters, plus NULL terminator */
+
+    while (len--)
+    {
+		if(*data == '#') { zeroes_or_hashes++;  sum += 0x23;}
+		if(*data == '0') { zeroes_or_hashes++;  sum += 0x30;}
+		if(*data == '1') sum += 0x31;
+		if(*data == '2') sum += 0x32;
+		if(*data == '3') sum += 0x33;
+		if(*data == '4') sum += 0x34;
+		if(*data == '5') sum += 0x35;
+		if(*data == '6') sum += 0x36;
+		if(*data == '7') sum += 0x37;
+		if(*data == '8') sum += 0x38;
+		if(*data == '9') sum += 0x39;
+		if(*data == 'A') sum += 0x41;
+		if(*data == 'B') sum += 0x42;
+		if(*data == 'C') sum += 0x43;
+		if(*data == 'D') sum += 0x44;
+		if(*data == 'E') sum += 0x45;
+		if(*data == 'F') sum += 0x46;
+		// Annoyingly the MERLIN fermi also has 'G' and 'H' as "hex" characters...
+		if(*data == 'G') sum += 0x47;
+		if(*data == 'H') sum += 0x48;
+
+		data++;
+    }
+
+	if(original_len == zeroes_or_hashes)
+	{
+		sum = 0;
+	}
+
+	// Only care about least significant 2 nibbles (1 nibble = 4 bits = 1 hex character)
+	int sum_modulo_256 = sum % 256;
+
+	sprintf(&res[0], "%02X", sum_modulo_256);
+	return res[1] + res[0]*256;
+}
+
+/**
+ *  Checksum function for the SKF MB350PC chopper.
+ *
+ *  Code is taken directly from appendix A of the manual, modified very slightly to make it work in stream device.
+ */
+static uint32_t skf_modbus(const uint8_t* data, size_t len, uint32_t sum)
+{
+    int i; /* Count through bitshifts */
+    uint16_t CRC_16 = 0xa001;
+    uint16_t crc = 0xffff; /* Initalize crc to 0xffff for modbus */
+    while (len--) {
+        crc ^= *data++; 
+        i = 8;
+        do {
+            crc = (uint16_t)((crc & 1) ? crc >> 1 ^ CRC_16 : crc >> 1);
+        } while (--i);
+    }
+    return crc; 
+}
+
 
 struct checksum
 {
@@ -558,7 +622,9 @@ static checksum checksumMap[] =
     {"hexsum8", hexsum,           0x00,       0x00,       1}, // 0x2D
     {"cpi",     CPI,              0x00,       0x00,       1}, // 0x7E
     {"leybold", leybold,          0x00,       0x00,       1}, // 0x22
-    {"brksCryo",brksCryo,         0x00,       0x00,       1}  // 0x4A
+    {"brksCryo",brksCryo,         0x00,       0x00,       1}, // 0x4A
+	{"julich",  julich,           0x00,       0x00,       2}, // 0x2D
+	{"skf_modbus",  skf_modbus,   0x00,       0x00,       2}  // 0x374B
 };
 
 static uint32_t mask[5] = {0, 0xFF, 0xFFFF, 0xFFFFFF, 0xFFFFFFFF};

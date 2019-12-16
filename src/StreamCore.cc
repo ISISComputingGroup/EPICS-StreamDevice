@@ -1093,9 +1093,13 @@ readCallback(StreamIoStatus status,
         }
         else
         {
-            error("%s: Timeout after reading %" Z "d byte%s \"%s%s\"\n",
-                name(), end, end==1 ? "" : "s", end > 20 ? "..." : "",
-                inputBuffer.expand(-20)());
+			// Don't continually print errors if we keen having the same mismatch
+			if (!inputBuffer.startswith(previousMismatch()))
+			{
+                error("%s: Timeout after reading %" Z "d byte%s \"%s%s\"\n",
+                    name(), end, end==1 ? "" : "s", end > 20 ? "..." : "",
+                    inputBuffer.expand(-20)());
+			}
         }
     }
 
@@ -1168,12 +1172,10 @@ matchInput()
 	   @mismatch handler is installed and starts with 'in' (then we reparse the input).
 	   We have previously mismatched the same output (to limit repeating errors)
     */
-
+    bool printErrors = (!(flags & AsyncMode) && onMismatch[0] != in && !inputLine.startswith(previousMismatch()));
     char command;
     const char* fieldName = NULL;
     StreamBuffer formatstring;
-
-    consumedInput = 0;
 
     while ((command = *commandIndex++) != StreamProtocolParser::eos)
     {
@@ -1277,7 +1279,7 @@ normal_format:
                             outputLine.length())(), outputLine.expand()());
                     if (inputLine.length() - consumedInput < outputLine.length())
                     {
-                        if (!(flags & AsyncMode) && onMismatch[0] != in)
+                        if (printErrors)
                         {
                             error("%s: Input \"%s%s\" too short."
                                   " No match for format \"%%%s\" (\"%s\")\n",
@@ -1291,7 +1293,7 @@ normal_format:
                     }
                     if (!outputLine.startswith(inputLine(consumedInput),outputLine.length()))
                     {
-                        if (!(flags & AsyncMode) && onMismatch[0] != in)
+                        if (printErrors)
                         {
                             error("%s: Input \"%s%s\" does not match format \"%%%s\" (\"%s\")\n",
                                 name(), inputLine.expand(consumedInput, 20)(),
@@ -1307,7 +1309,7 @@ normal_format:
                 flags &= ~Separator;
                 if (!matchValue(fmt, fieldAddress ? fieldAddress() : NULL))
                 {
-                    if (!(flags & AsyncMode) && onMismatch[0] != in)
+                    if (printErrors)
                     {
                         if (flags & ScanTried)
                             error("%s: Input \"%s%s\" does not match format \"%%%s\"\n",
@@ -1340,7 +1342,7 @@ normal_format:
                 {
                     int i = 0;
                     while (commandIndex[i] >= ' ') i++;
-                    if (!(flags & AsyncMode) && onMismatch[0] != in)
+                    if (printErrors)
                     {
                         error("%s: Input \"%s%s\" too short.\n",
                             name(),
@@ -1353,7 +1355,7 @@ normal_format:
                 }
                 if (command != inputLine[consumedInput])
                 {
-                    if (!(flags & AsyncMode) && onMismatch[0] != in)
+                    if (printErrors)
                     {
                         int i = 0;
                         while (commandIndex[i] >= ' ') i++;
@@ -1385,7 +1387,7 @@ normal_format:
     size_t surplus = inputLine.length()-consumedInput;
     if (surplus > 0 && !(flags & IgnoreExtraInput))
     {
-        if (!(flags & AsyncMode) && onMismatch[0] != in)
+        if (printErrors)
         {
             error("%s: %" Z "d byte%s surplus input \"%s%s\"\n",
                 name(), surplus, surplus==1 ? "" : "s",
