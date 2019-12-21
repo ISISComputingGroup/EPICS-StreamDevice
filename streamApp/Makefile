@@ -57,6 +57,10 @@ SHRLIB_DEPLIB_DIRS += $(PCRE_LIB)
 endif
 endif
 
+ifdef ONCRPC
+PROD_SYS_LIBS_WIN32 += oncrpc
+endif
+
 PROD_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 # switch off annoying rset warnings in 3.16+
