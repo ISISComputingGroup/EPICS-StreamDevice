@@ -58,7 +58,7 @@ endif
 endif
 
 ifdef ONCRPC
-PROD_SYS_LIBS_WIN32 += oncrpc
+PROD_LIBS_WIN32 += oncrpc
 endif
 
 PROD_LIBS += $(EPICS_BASE_IOC_LIBS)
