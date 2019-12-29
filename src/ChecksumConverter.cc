@@ -714,10 +714,6 @@ printPseudo(const StreamFormat& format, StreamBuffer& output)
 
     debug("ChecksumConverter %s: output to check: \"%s\"\n",
         checksumMap[fnum].name, output.expand(start,length)());
-        
-    sum = (xorout ^ checksumMap[fnum].func(
-        reinterpret_cast<unsigned char*>(output(start)), length, init))
-        & mask[checksumMap[fnum].bytes];
 
     sum = (xorout ^ checksumMap[fnum].func(
         reinterpret_cast<uint8_t*>(output(start)), length, init))
@@ -900,23 +896,6 @@ scanPseudo(const StreamFormat& format, StreamBuffer& input, size_t& cursor)
                 if ((input[cursor+2*i+1] & 0xf0) != 0x30)
                 {
                     debug("ChecksumConverter %s: Input byte 0x%02" PRIX8 " is not in range 0x30 - 0x3F\n",
-                        checksumMap[fnum].name, input[cursor+2*i+1]);
-                    return -1;
-                }
-                inchar = ((input[cursor+2*i] & 0x0f) << 4) | (input[cursor+2*i+1] & 0x0f);
-            }
-            else
-            if (format.flags & left_flag) // poor man's hex: 0x30 - 0x3F
-            {
-                if ((input[cursor+2*i] & 0xf0) != 0x30)
-                {
-                    debug("ChecksumConverter %s: Input byte 0x%02X is not in range 0x30 - 0x3F\n", 
-                        checksumMap[fnum].name, input[cursor+2*i]);
-                    return -1;
-                }
-                if ((input[cursor+2*i+1] & 0xf0) != 0x30)
-                {
-                    debug("ChecksumConverter %s: Input byte 0x%02X is not in range 0x30 - 0x3F\n", 
                         checksumMap[fnum].name, input[cursor+2*i+1]);
                     return -1;
                 }

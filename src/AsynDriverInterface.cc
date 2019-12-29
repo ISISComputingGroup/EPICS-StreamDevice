@@ -509,6 +509,19 @@ connectToBus(const char* portname, int addr)
         // (read only one byte first).
         peeksize = inputBuffer.capacity();
     }
+
+    // Install callback for connect/disconnect events
+    status = pasynManager->exceptionCallbackAdd(pasynUser, exceptionHandler);
+    if (status != asynSuccess)
+    {
+        debug("%s: warning: Cannot install exception handler: %s\n",
+            clientName(), pasynUser->errorMessage);
+        // No problem, only @connect handler will not work
+    }
+    pasynManager->isConnected(pasynUser, &connected);
+    debug("%s: AsynDriverInterface::connectToBus(%s, %d): device is now %s\n",
+        clientName(), portname, addr, connected ? "connected" : "disconnected");
+
     return true;
 }
 
@@ -746,7 +759,7 @@ writeHandler()
             writeCallback(StreamIoTimeout);
             return;
         case asynOverflow:
-            error("%s: asynOverflow in write. Asyn driver says: %s\n",
+            error("%s: asynOverflow in write: %s\n",
                 clientName(), pasynUser->errorMessage);
             writeCallback(StreamIoFault);
             return;
@@ -766,7 +779,7 @@ writeHandler()
             return;
 #ifdef ASYN_VERSION // asyn >= 4.14
         case asynDisconnected:
-            error("%s: asynDisconnected in write. Asyn driver says: %s\n",
+            error("%s: asynDisconnected in write: %s\n",
                 clientName(), pasynUser->errorMessage);
             disconnectCallback();
             return;
@@ -777,7 +790,7 @@ writeHandler()
             return;
 #endif
         default:
-            error("%s: unknown asyn error in write. Asyn driver says: %s\n",
+            error("%s: unknown asyn error in write: %s\n",
                 clientName(), pasynUser->errorMessage);
             writeCallback(StreamIoFault);
             return;
@@ -1066,7 +1079,7 @@ readHandler()
                 }
                 peeksize = inputBuffer.capacity();
                 // deliver whatever we could save
-                error("%s: asynOverflow in read. Asyn driver says: %s\n",
+                error("%s: asynOverflow in read: %s\n",
                     clientName(), pasynUser->errorMessage);
                 readCallback(StreamIoFault, buffer, received);
                 break;
@@ -1085,7 +1098,7 @@ readHandler()
                 break;
 #ifdef ASYN_VERSION // asyn >= 4.14
             case asynDisconnected:
-                error("%s: asynDisconnected in read. Asyn driver says: %s\n",
+                error("%s: asynDisconnected in read: %s\n",
                     clientName(), pasynUser->errorMessage);
                 connected = false;
                 disconnectCallback();
@@ -1097,7 +1110,7 @@ readHandler()
                 return;
 #endif
             default:
-                error("%s: unknown asyn error in read. Asyn driver says: %s\n",
+                error("%s: unknown asyn error in read: %s\n",
                     clientName(), pasynUser->errorMessage);
                 readCallback(StreamIoFault);
                 return;

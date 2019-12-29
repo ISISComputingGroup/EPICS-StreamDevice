@@ -64,7 +64,7 @@ public:
         {init(s, size);}
 
     StreamBuffer(const char* s)
-        {init(s, s?static_cast<long>(strlen(s)):0);}
+        {init(s, s?strlen(s):0);}
 
     StreamBuffer(const StreamBuffer& s)
         {init(s.buffer+s.offs, s.len);}
@@ -126,7 +126,7 @@ public:
     StreamBuffer& append(const void* s, ssize_t size);
 
     StreamBuffer& append(const char* s)
-        {return append(s, s?static_cast<long>(strlen(s)):0);}
+        {return append(s, s?strlen(s):0);}
 
     StreamBuffer& append(const StreamBuffer& s)
         {return append(s.buffer+s.offs, s.len);}
@@ -146,7 +146,7 @@ public:
         {clear(); return append(s, size);}
 
     StreamBuffer& set(const char* s)
-        {clear(); return append(s, s?static_cast<long>(strlen(s)):0);}
+        {clear(); return append(s, s?strlen(s):0);}
 
     StreamBuffer& set(const StreamBuffer& s)
         {clear(); return append(s.buffer+s.offs, s.len);}

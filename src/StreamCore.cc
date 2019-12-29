@@ -1172,10 +1172,12 @@ matchInput()
 	   @mismatch handler is installed and starts with 'in' (then we reparse the input).
 	   We have previously mismatched the same output (to limit repeating errors)
     */
-    bool printErrors = (!(flags & AsyncMode) && onMismatch[0] != in && !inputLine.startswith(previousMismatch()));
+    bool printErrors = true; // (!(flags & AsyncMode) && onMismatch[0] != in && !inputLine.startswith(previousMismatch()));
     char command;
     const char* fieldName = NULL;
     StreamBuffer formatstring;
+
+    consumedInput = 0;
 
     while ((command = *commandIndex++) != StreamProtocolParser::eos)
     {
