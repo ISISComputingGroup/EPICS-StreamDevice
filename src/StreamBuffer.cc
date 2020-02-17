@@ -306,6 +306,13 @@ print(const char* fmt, ...)
             return *this;
         }
         if (printed > -1) grow(len+printed);
+#if defined (_WIN32) && (_MSC_VER < 1700)
+        else if (printed == -1) {
+            va_start(va, fmt);
+            grow(len + _vscprintf(fmt, va));
+            va_end(va);
+        }
+#endif
         else grow(len);
     }
 }
