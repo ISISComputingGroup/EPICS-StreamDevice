@@ -1172,7 +1172,7 @@ matchInput()
 	   @mismatch handler is installed and starts with 'in' (then we reparse the input).
 	   We have previously mismatched the same output (to limit repeating errors)
     */
-    bool printErrors = true; // (!(flags & AsyncMode) && onMismatch[0] != in && !inputLine.startswith(previousMismatch()));
+    bool printErrors = (!(flags & AsyncMode) && onMismatch[0] != in && !inputLine.startswith(previousMismatch()));
     char command;
     const char* fieldName = NULL;
     StreamBuffer formatstring;
@@ -1249,7 +1249,7 @@ normal_format:
                         }
                         else
                         {
-                            if (!(flags & AsyncMode) && onMismatch[0] != in)
+                            if (printErrors)
                             {
                                 error("%s: Input \"%s%s\" does not match format \"%%%s\"\n",
                                     name(), inputLine.expand(consumedInput, 20)(),
