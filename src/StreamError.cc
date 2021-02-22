@@ -23,11 +23,13 @@
 #include "StreamError.h"
 #ifdef _WIN32
 #include <windows.h>
+#include <io.h>
 #endif
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
 #include <errlog.h>
+#include <epicsStdio.h>
 
 int streamDebug = 0;
 int streamError = 1;
@@ -136,4 +138,14 @@ print(const char* fmt, ...)
     fflush(fp);
     va_end(args);
     return 1;
+}
+
+const char* ansiEscape(AnsiMode mode)
+{
+    static const char* AnsiEscapes[] = { "\033[7m", "\033[27m", "\033[47m", "\033[0m", "\033[31;1m" };
+#ifdef _WIN32
+    return _isatty(_fileno(epicsGetStdout())) ? AnsiEscapes[mode] : "";
+#else
+    return isatty(fileno(epicsGetStdout())) ? AnsiEscapes[mode] : "";
+#endif
 }
