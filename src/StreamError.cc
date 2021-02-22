@@ -145,7 +145,7 @@ const char* ansiEscape(AnsiMode mode)
     static const char* AnsiEscapes[] = { "\033[7m", "\033[27m", "\033[47m", "\033[0m", "\033[31;1m" };
     static const char* stream_debug_color = getenv("STREAM_DEBUG_COLOR");
     bool color_output = false;
-    if (stream_debug_color == NULL || !strcmp(stream_debug_color, "auto"))
+    if (stream_debug_color == NULL || stream_debug_color[0] == 'A' || stream_debug_color[0] == 'a') // auto
     {
 #ifdef _WIN32
         color_output =  _isatty(_fileno(epicsGetStdout()));
@@ -153,7 +153,7 @@ const char* ansiEscape(AnsiMode mode)
         color_output =  isatty(fileno(epicsGetStdout()));
 #endif /* _WIN32 */
     }
-    else if (stream_debug_color[0] == 'Y' || stream_debug_color[0] == 'y')
+    else if (stream_debug_color[0] == 'Y' || stream_debug_color[0] == 'y') // yes
     {
         color_output = true;
     }
