@@ -24,7 +24,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <io.h>
-#endif
+#endif /* _WIN32 */
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
@@ -50,17 +50,26 @@ FILE *StreamDebugFile = NULL;
 #endif
 
 /* Enable ANSI colors in Windows console */
-static int win_console_init() {
-	DWORD dwMode = 0;
-    HANDLE hCons = GetStdHandle(STD_ERROR_HANDLE);
-	GetConsoleMode(hCons, &dwMode);
-	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-	SetConsoleMode(hCons, dwMode);
-	return 0;
+static bool win_console_init() {
+    HANDLE hCons[] = { GetStdHandle(STD_ERROR_HANDLE), GetStdHandle(STD_OUTPUT_HANDLE) };
+    for(int i=0; i < sizeof(hCons) / sizeof(HANDLE); ++i)
+    {
+        DWORD dwMode = 0;
+        if (hCons[i] == INVALID_HANDLE_VALUE || !GetConsoleMode(hCons[i], &dwMode))
+        {
+            return false;
+        }
+        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        if (!SetConsoleMode(hCons[i], dwMode))
+        {
+            return false;
+        }
+    }
+    return true;
 }
-static int s = win_console_init();
+static bool win_console_colored = win_console_init();
 
-#endif
+#endif /* _WIN32 */
 
 /* You can globally change the printTimestamp function
    by setting the StreamPrintTimestampFunction variable
@@ -148,12 +157,12 @@ const char* ansiEscape(AnsiMode mode)
     if (stream_debug_color == NULL || stream_debug_color[0] == 'A' || stream_debug_color[0] == 'a') // auto
     {
 #ifdef _WIN32
-        color_output =  _isatty(_fileno(epicsGetStdout()));
+        color_output =  win_console_colored && _isatty(_fileno(epicsGetStdout()));
 #else
         color_output =  isatty(fileno(epicsGetStdout()));
 #endif /* _WIN32 */
     }
-    else if (stream_debug_color[0] == 'Y' || stream_debug_color[0] == 'y') // yes
+    else if (stream_debug_color[0] == 'Y' || stream_debug_color[0] == 'y' || stream_debug_color[0] == '1') // yes
     {
         color_output = true;
     }
