@@ -143,9 +143,19 @@ print(const char* fmt, ...)
 const char* ansiEscape(AnsiMode mode)
 {
     static const char* AnsiEscapes[] = { "\033[7m", "\033[27m", "\033[47m", "\033[0m", "\033[31;1m" };
+    static const char* stream_debug_color = getenv("STREAM_DEBUG_COLOR");
+    bool color_output = false;
+    if (stream_debug_color == NULL || !strcmp(stream_debug_color, "auto"))
+    {
 #ifdef _WIN32
-    return _isatty(_fileno(epicsGetStdout())) ? AnsiEscapes[mode] : "";
+        color_output =  _isatty(_fileno(epicsGetStdout()));
 #else
-    return isatty(fileno(epicsGetStdout())) ? AnsiEscapes[mode] : "";
-#endif
+        color_output =  isatty(fileno(epicsGetStdout()));
+#endif /* _WIN32 */
+    }
+    else if (stream_debug_color[0] == 'Y' || stream_debug_color[0] == 'y')
+    {
+        color_output = true;
+    }
+    return color_output ? AnsiEscapes[mode] : "";
 }
