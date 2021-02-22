@@ -341,7 +341,7 @@ StreamBuffer StreamBuffer::expand(ssize_t start, ssize_t length) const
     {
         c = buffer[i];
         if (c < 0x20 || c >= 0x7f)
-            result.print("%s<%02x>%s", ansiEscape(REVERSE_VIDEO), c & 0xff, ansiEscape(NOT_REVERSE_VIDEO));
+            result.print("%s<%02x>%s", ansiEscape(ANSI_REVERSE_VIDEO), c & 0xff, ansiEscape(ANSI_NOT_REVERSE_VIDEO));
         else
             result.append(c);
     }
@@ -361,7 +361,7 @@ dump() const
         c = buffer[i];
         if (offs && i == offs) result.append(ansiEscape(ANSI_RESET));
         if (c < 0x20 || c >= 0x7f)
-            result.print("%s<%02x>%s", ansiEscape(REVERSE_VIDEO), c & 0xff, ansiEscape(NOT_REVERSE_VIDEO));
+            result.print("%s<%02x>%s", ansiEscape(ANSI_REVERSE_VIDEO), c & 0xff, ansiEscape(ANSI_NOT_REVERSE_VIDEO));
         else
             result.append(c);
         if (i == offs+len-1) result.append(ansiEscape(ANSI_BG_WHITE));
