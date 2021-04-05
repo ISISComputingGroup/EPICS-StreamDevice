@@ -837,7 +837,7 @@ lockCallback(StreamIoStatus status)
         case StreamIoSuccess:
             break;
         case StreamIoTimeout:
-            debug("%s: Cannot lock device within %ld ms, device seems to be busy\n",
+            error("%s: Cannot lock device within %ld ms, device seems to be busy\n",
                 name(), lockTimeout);
             flags &= ~BusOwner;
             finishProtocol(LockTimeout);
