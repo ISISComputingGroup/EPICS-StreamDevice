@@ -20,12 +20,22 @@
 * along with StreamDevice. If not, see https://www.gnu.org/licenses/.
 *************************************************************************/
 
-#include "devStream.h"
+#include "StreamVersion.h"
 
 #define STR2(x) #x
 #define STR(x) STR2(x)
 const char StreamVersion [] =
-    "StreamDevice " STR(STREAM_MAJOR)
+    "StreamDevice"
+#ifdef STREAM_MAJOR
+    " " STR(STREAM_MAJOR)
     "." STR(STREAM_MINOR)
     "." STR(STREAM_PATCHLEVEL)
-    " built " __DATE__ " " __TIME__;
+    STREAM_DEV
+#endif
+#ifdef STREAM_COMMIT_DATE
+    " " STREAM_COMMIT_DATE
+#endif
+#ifdef STREAM_COMMIT_HASH
+    "\n  commit: " STREAM_COMMIT_HASH
+#endif
+;

@@ -72,9 +72,9 @@ printCommands(StreamBuffer& buffer, const char* c)
                 buffer.append("    disconnect;\n");
                 break;
             default:
-                buffer.append("\033[31;1mGARBAGE: ");
+                buffer.append(ansiEscape(ANSI_RED_BOLD)).append("GARBAGE: ");
                 c = StreamProtocolParser::printString(buffer, c-1);
-                buffer.append("\033[0m\n");
+                buffer.append(ansiEscape(ANSI_RESET)).append("\n");
         }
     }
 }
@@ -187,9 +187,12 @@ bool StreamCore::
 parse(const char* filename, const char* _protocolname)
 {
     protocolname = _protocolname;
-    // extract substitutions from protocolname "name(sub1,sub2)"
+    // extract substitutions from protocolname "name ( sub1, sub2 ) "
     ssize_t i = protocolname.find('(');
-    if (i >= 0)
+    if (i < 0) i = 0;
+    while (protocolname[i-1] == ' ')
+        protocolname.remove(--i, 1);
+    if (protocolname[i] == '(')
     {
         while (i < (ssize_t)protocolname.length())
         {

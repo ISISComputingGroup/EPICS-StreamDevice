@@ -8,3 +8,5 @@ O.*/
 *.pdf
 *.*log
 .project
+StreamVersion.h
+*.local
