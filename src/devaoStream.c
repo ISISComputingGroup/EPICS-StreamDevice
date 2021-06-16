@@ -52,16 +52,16 @@ static long readData(dbCommon *record, format_t *format)
             break;
             val += ao->roff;
             if (ao->linr == menuConvertNO_CONVERSION) {
-	        ; /*do nothing*/
+                ; /*do nothing*/
             } else if ((ao->linr == menuConvertLINEAR)
 #ifndef EPICS_3_13
-		    || (ao->linr == menuConvertSLOPE)
+                    || (ao->linr == menuConvertSLOPE)
 #endif
                     ) {
                 val = val * ao->eslo + ao->eoff;
             } else {
                 if (cvtRawToEngBpt(&val, ao->linr, 0,
-		        (void *)&ao->pbrk, &ao->lbrk) == ERROR) return ERROR;
+                    (void *)&ao->pbrk, &ao->lbrk) == ERROR) return ERROR;
             }
         }
         default:
@@ -73,7 +73,7 @@ static long readData(dbCommon *record, format_t *format)
     if (record->pact) return DO_NOT_CONVERT;
     /* In @init handler, no processing, enforce monitor updates. */
     ao->omod = ao->oval != val;
-    ao->orbv = ao->oval = val;
+    ao->orbv = (epicsInt32)(ao->oval = val);
     monitor_mask = recGblResetAlarms(record);
     if (!(fabs(ao->mlst - val) <= ao->mdel))
     {

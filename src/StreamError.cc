@@ -23,7 +23,10 @@
 #include "StreamError.h"
 #ifdef _WIN32
 #include <windows.h>
-#endif
+#include <io.h>
+#else
+#include <unistd.h>
+#endif /* _WIN32 */
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
@@ -46,18 +49,36 @@ FILE *StreamDebugFile = NULL;
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #endif
 
-/* Enable ANSI colors in Windows console */
-static int win_console_init() {
-	DWORD dwMode = 0;
-    HANDLE hCons = GetStdHandle(STD_ERROR_HANDLE);
-	GetConsoleMode(hCons, &dwMode);
-	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-	SetConsoleMode(hCons, dwMode);
-	return 0;
+/* Enable ANSI color support in Windows console */
+static bool win_console_init() {
+    HANDLE hCons[] = { GetStdHandle(STD_ERROR_HANDLE),
+                       GetStdHandle(STD_OUTPUT_HANDLE) };
+    for(int i=0; i < sizeof(hCons) / sizeof(HANDLE); ++i)
+    {
+        DWORD dwMode = 0;
+        if (hCons[i] == NULL ||
+            hCons[i] == INVALID_HANDLE_VALUE ||
+            !GetConsoleMode(hCons[i], &dwMode))
+        {
+            return false;
+        }
+        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        if (!SetConsoleMode(hCons[i], dwMode))
+        {
+            return false;
+        }
+    }
+    return true;
 }
-static int s = win_console_init();
 
-#endif
+/* do isatty() call second as always want to run win_console_init() */
+int streamDebugColored = win_console_init() && _isatty(_fileno(stdout));
+
+#else
+
+int streamDebugColored = isatty(fileno(stdout));
+
+#endif /* _WIN32 */
 
 /* You can globally change the printTimestamp function
    by setting the StreamPrintTimestampFunction variable
@@ -106,14 +127,13 @@ void StreamVError(int line, const char* file, const char* fmt, va_list args)
         va_end(args2);
     }
 #endif
-    fprintf(stderr, "\033[31;1m");
-    fprintf(stderr, "%s ", timestamp);
+    fprintf(stderr, "%s%s ", ansiEscape(ANSI_RED_BOLD), timestamp);
     if (file)
     {
         fprintf(stderr, "%s line %d: ", file, line);
     }
     vfprintf(stderr, fmt, args);
-    fprintf(stderr, "\033[0m");
+    fprintf(stderr, "%s", ansiEscape(ANSI_RESET));
 }
 
 int StreamDebugClass::
@@ -132,4 +152,14 @@ print(const char* fmt, ...)
     fflush(fp);
     va_end(args);
     return 1;
+}
+
+/**
+ * Return an ANSI escape code if coloured debug output is enabled
+ */
+const char* ansiEscape(AnsiMode mode)
+{
+    static const char* AnsiEscapes[] = { "\033[7m", "\033[27m", "\033[47m",
+                                         "\033[0m", "\033[31;1m" };
+    return streamDebugColored ? AnsiEscapes[mode] : "";
 }
