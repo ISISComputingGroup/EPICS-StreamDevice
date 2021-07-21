@@ -20,21 +20,25 @@
 * along with StreamDevice. If not, see https://www.gnu.org/licenses/.
 *************************************************************************/
 
-#include "StreamError.h"
+#include <string.h>
+#include <time.h>
+#include <stdio.h>
+
 #ifdef _WIN32
 #include <windows.h>
 #include <io.h>
 #else
 #include <unistd.h>
 #endif /* _WIN32 */
-#include <string.h>
-#include <time.h>
-#include <stdio.h>
-#include <errlog.h>
+
+#include "StreamError.h"
 
 int streamDebug = 0;
 int streamError = 1;
 FILE *StreamDebugFile = NULL;
+
+/*0: disable timestamps on stream messages (both debug and error)*/
+int streamMsgTimeStamped = 1;
 
 #ifndef va_copy
 #ifdef __va_copy
@@ -73,11 +77,11 @@ static bool win_console_init() {
 }
 
 /* do isatty() call second as always want to run win_console_init() */
-int streamDebugColored = win_console_init() && _isatty(_fileno(stdout));
+int streamDebugColored = win_console_init() && _isatty(_fileno(stderr));
 
 #else
 
-int streamDebugColored = isatty(fileno(stdout));
+int streamDebugColored = isatty(fileno(stderr));
 
 #endif /* _WIN32 */
 
@@ -95,6 +99,7 @@ static void printTimestamp(char* buffer, size_t size)
 }
 
 void (*StreamPrintTimestampFunction)(char* buffer, size_t size) = printTimestamp;
+const char* (*StreamGetThreadNameFunction)(void) = NULL;
 
 void StreamError(const char* fmt, ...)
 {
@@ -114,21 +119,45 @@ void StreamError(int line, const char* file, const char* fmt, ...)
 
 void StreamVError(int line, const char* file, const char* fmt, va_list args)
 {
-    char timestamp[40];
     if (!(streamError || streamDebug)) return; // Error logging disabled
-    StreamPrintTimestampFunction(timestamp, 40);
+    char timestamp[40];
+    const char *threadname = NULL;
+    int timeStamped = streamMsgTimeStamped;
+    if (timeStamped)
+    {
+        StreamPrintTimestampFunction(timestamp, sizeof(timestamp));
+    }
+    if (StreamGetThreadNameFunction)
+    {
+        threadname = StreamGetThreadNameFunction();
+    }
 #ifdef va_copy
     if (StreamDebugFile)
     {
         va_list args2;
         va_copy(args2, args);
-        fprintf(StreamDebugFile, "%s ", timestamp);
+        if (timeStamped)
+        {
+            fprintf(StreamDebugFile, "%s ", timestamp);
+        }
+        if (threadname)
+        {
+            fprintf(StreamDebugFile, "%s ", threadname);
+        }
         vfprintf(StreamDebugFile, fmt, args2);
         fflush(StreamDebugFile);
         va_end(args2);
     }
 #endif
-    fprintf(stderr, "%s%s ", ansiEscape(ANSI_RED_BOLD), timestamp);
+    fprintf(stderr, "%s", ansiEscape(ANSI_RED_BOLD));
+    if (timeStamped)
+    {
+        fprintf(stderr, "%s ", timestamp);
+    }
+    if (threadname)
+    {
+        fprintf(stderr, "%s ", threadname);
+    }
     if (file)
     {
         fprintf(stderr, "%s line %d: ", file, line);
@@ -141,13 +170,20 @@ int StreamDebugClass::
 print(const char* fmt, ...)
 {
     va_list args;
-    char timestamp[40];
-    StreamPrintTimestampFunction(timestamp, 40);
     va_start(args, fmt);
     const char* f = strrchr(file, '/');
     if (f) f++; else f = file;
     FILE* fp = StreamDebugFile ? StreamDebugFile : stderr;
-    fprintf(fp, "%s ", timestamp);
+    if (streamMsgTimeStamped)
+    {
+        char timestamp[40];
+        StreamPrintTimestampFunction(timestamp, sizeof(timestamp));
+        fprintf(fp, "%s ", timestamp);
+    }
+    if (StreamGetThreadNameFunction)
+    {
+        fprintf(fp, "%s ", StreamGetThreadNameFunction());
+    }
     fprintf(fp, "%s:%d: ", f, line);
     vfprintf(fp, fmt, args);
     fflush(fp);
