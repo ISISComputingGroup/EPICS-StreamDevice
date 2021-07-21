@@ -33,7 +33,9 @@
 extern int streamDebug;
 extern int streamError;
 extern int streamDebugColored;
+extern int streamMsgTimeStamped;
 extern void (*StreamPrintTimestampFunction)(char* buffer, size_t size);
+extern const char* (*StreamGetThreadNameFunction)(void);
 
 void StreamError(int line, const char* file, const char* fmt, ...)
 __attribute__((__format__(__printf__,3,4)));
@@ -66,6 +68,7 @@ StreamDebugObject(const char* file, int line)
 
 #define error StreamError
 #define debug (!streamDebug)?0:StreamDebugObject(__FILE__,__LINE__).print
+#define debug2 (streamDebug<2)?0:StreamDebugObject(__FILE__,__LINE__).print
 
 /*
  * ANSI escape sequences for terminal output
