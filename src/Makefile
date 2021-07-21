@@ -21,16 +21,8 @@
 # along with StreamDevice. If not, see https://www.gnu.org/licenses/.
 #########################################################################/
 
-TOP = ../..
-ifneq ($(wildcard ../../configure),)
-  include $(TOP)/configure/CONFIG
-else ifneq ($(wildcard ../../config),)
-  include $(TOP)/config/CONFIG_APP
-  include $(TOP)/config/RULES_ARCHS
-else
-  TOP= ..
-  include $(TOP)/configure/CONFIG
-endif
+TOP= ..
+include $(TOP)/configure/CONFIG
 
 -include CONFIG_STREAM
 -include ../CONFIG_STREAM
@@ -51,7 +43,7 @@ endif
 
 ifeq ($(LOADABLE_MODULE),YES)
 SRCS += $(LIBRARY_DEFAULT)_registerRecordDeviceDriver.cpp
-endif 
+endif
 SRCS += $(BUSSES:%=%Interface.cc)
 SRCS += $(FORMATS:%=%Converter.cc)
 SRCS += $(RECORDTYPES:%=dev%Stream.c)
@@ -74,14 +66,28 @@ endif
 LIB_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 INC += devStream.h
+INC += StreamFormat.h
+INC += StreamFormatConverter.h
+INC += StreamBuffer.h
+INC += StreamError.h
+INC += StreamVersion.h
+INC += StreamProtocol.h
+INC += StreamBusInterface.h
+INC += StreamCore.h
+INC += MacroMagic.h
 
 # switch off annoying rset warnings in 3.16+
 CPPFLAGS += -DUSE_TYPED_RSET
 
+CPPFLAGS += -DSTREAM_INTERNAL
+
 -include $(TOP)/configure/RULES
 
-# Update version string whenever something changes
-StreamVersion$(OBJ): $(filter-out StreamVersion.o,$(LIBOBJS)$(LIBRARY_OBJS))
+# Update version string whenever something changed.
+StreamVersion$(OBJ): $(COMMON_DIR)/StreamVersion.h $(filter-out StreamVersion$(OBJ),$(LIBOBJS) $(LIBRARY_OBJS)) ../CONFIG_STREAM
+$(COMMON_DIR)/StreamVersion.h: ../../.VERSION $(SRCS) $(filter-out StreamVersion.h, $(INC))
+	@echo Creating $@
+	$(PERL) ../makeStreamVersion.pl $@
 
 # Add references to all registrars to main file to avoid
 # missing initialization.

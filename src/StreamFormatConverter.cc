@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <limits.h>
+
 #include "StreamFormatConverter.h"
 #include "StreamError.h"
 
@@ -148,8 +149,6 @@ parseFormat(const char*& source, FormatType formatType, StreamFormat& streamForm
         error("Missing converter character\n");
         return false;
     }
-    debug("StreamFormatConverter::parseFormat: converter='%c'\n",
-        streamFormat.conv);
     StreamFormatConverter* converter;
     converter = StreamFormatConverter::find(streamFormat.conv);
     if (!converter)

@@ -29,11 +29,4 @@ endif
 include $(TOP)/config/CONFIG_APP
 include ../CONFIG_STREAM
 
-DBDNAME = stream.dbd
-INC += devStream.h
-
 include $(EPICS_BASE)/config/RULES.Host
-
-# create stream.dbd from all RECORDTYPES
-stream.dbd: ../CONFIG_STREAM
-	$(PERL) ../makedbd.pl -3.13 $(RECORDTYPES) > $@

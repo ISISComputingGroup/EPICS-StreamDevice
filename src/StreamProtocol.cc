@@ -23,6 +23,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdarg.h>
+
 #include "StreamProtocol.h"
 #include "StreamFormatConverter.h"
 #include "StreamError.h"
@@ -52,7 +53,7 @@ class StreamProtocolParser::Protocol::Variable
 // StreamProtocolParser
 
 StreamProtocolParser* StreamProtocolParser::parsers = NULL;
-const char* StreamProtocolParser::path = ".";
+const char* StreamProtocolParser::path = NULL;
 static const char* specialChars = " ,;{}=()$'\"+-*/";
 
 // Client destructor
@@ -156,52 +157,70 @@ this after protocol arguments have been replaced.
 StreamProtocolParser* StreamProtocolParser::
 readFile(const char* filename)
 {
-    FILE* file;
-#ifdef windows
-    const char pathseparator = ';';
-    const char dirseparator = '\\';
-#else
-    const char pathseparator = ':';
-    const char dirseparator = '/';
-#endif
+    FILE* file = NULL;
     StreamProtocolParser* parser;
     const char *p;
-    const char *s;
     size_t n;
     StreamBuffer dir;
 
-    // look for filename in every dir in search path
-    for (p = path; *p; p += n)
-    {
-        dir.clear();
-        // get next dir from search path (avoiding strtok, strsep, strcspn)
-        s = strchr(p, pathseparator);
-        if (s) n = s - p;
-        else n = strlen(p);
-        dir.append(p, n);
-        if (n && p[n-1] != dirseparator) dir.append(dirseparator);
-        if (s) p++;
-        // append filename
-        dir.append(filename);
-        // try to read the file
-        debug("StreamProtocolParser::readFile: try '%s'\n", dir());
-        file = fopen(dir(), "r");
-        if (file)
+    // no path or absolute file name
+    if (!path || filename[0] == '/'
+#ifdef _WIN32
+        || filename[0] == '\\' || (isalpha(filename[0]) && filename[1] == ':')
+#endif
+        ) {
+        // absolute file name
+        file = fopen(filename, "r");
+        if (file) {
+            debug("StreamProtocolParser::readFile: found '%s'\n", filename);
+        } else {
+            error("Can't find readable file '%s'\n", filename);
+            return NULL;
+        }
+    } else {
+        // look for filename in every dir in search path
+        for (p = path; *p; p += n)
         {
-            // file found; create a parser to read it
-            parser = new StreamProtocolParser(file, filename);
-            fclose(file);
-            if (!parser->valid) return NULL;
-//             printf(
-// "/---------------------------------------------------------------------\\\n");
-//             parser->report();
-//             printf(
-// "\\---------------------------------------------------------------------/\n");
-            return parser;
+            dir.clear();
+            // allow ':' or ';' for OS independence
+            // we need to be careful with drive letters though
+            n = strcspn(p, ":;");
+#ifdef _WIN32
+            if (n == 1 && p[1] == ':' && isalpha(p[0]))
+            {
+                // driver letter
+                n = 2 + strcspn(p+2, ":;");
+            }
+#endif
+            dir.append(p, n);
+            // append / after everything except empty path [or drive letter]
+            // Windows is fine with / as well
+            if (n) {
+#ifdef _WIN32
+                if (n != 2 || p[1] != ':' || !isalpha(p[0]))
+#endif
+                dir.append('/');
+            }
+            if (p[n]) n++; // skip the path separator
+            dir.append(filename);
+            // try to read the file
+            debug("StreamProtocolParser::readFile: try '%s'\n", dir());
+            file = fopen(dir(), "r");
+            if (file) {
+                debug("StreamProtocolParser::readFile: found '%s'\n", dir());
+                break;
+            }
+        }
+        if (!file) {
+            error("Can't find readable file '%s' in '%s'\n", filename, path);
+            return NULL;
         }
     }
-    error("Can't find readable file '%s' in '%s'\n", filename, path);
-    return NULL;
+    // file found; create a parser to read it
+    parser = new StreamProtocolParser(file, filename);
+    fclose(file);
+    if (!parser->valid) return NULL;
+    return parser;
 }
 
 /*
@@ -262,7 +281,7 @@ parseProtocol(Protocol& protocol, StreamBuffer* commands)
         startline = line;
         if (!readToken(token, " ,;{}=()$'\"", isGlobalContext(commands)))
             return false;
-        debug("StreamProtocolParser::parseProtocol:"
+        debug2("StreamProtocolParser::parseProtocol:"
             " token='%s'\n", token.expand()());
 
         if (token[0] == 0)
@@ -413,7 +432,7 @@ parseProtocol(Protocol& protocol, StreamBuffer* commands)
             error(line, filename(), "after command '%s'\n", token());
             return false;
         }
-        debug("parseProtocol: command '%s'\n", (*commands).expand()());
+        debug2("parseProtocol: command '%s'\n", (*commands).expand()());
         commands->append('\0'); // terminate value with null byte
     }
 }
@@ -468,7 +487,7 @@ Each time newline is read, line is incremented.
     if (c == '$')
     {
         // a variable
-        debug("StreamProtocolParser::readToken: Variable\n");
+        debug2("StreamProtocolParser::readToken: Variable\n");
         buffer.append(c);
         if (quote) buffer.append('"'); // mark as quoted variable
         c = getc(file);
@@ -485,7 +504,7 @@ Each time newline is read, line is incremented.
             quote = false;
             // variable like ${xyz}
             if (!readToken(buffer, "{}=;")) return false;
-            debug("StreamProtocolParser::readToken: Variable '%s' in {}\n",
+            debug2("StreamProtocolParser::readToken: Variable '%s' in {}\n",
                 buffer(token));
             c = getc(file);
             if (c != '}')
@@ -511,7 +530,7 @@ Each time newline is read, line is incremented.
     }
     else if (quote || c == '\'' || c == '"')
     {
-        debug("StreamProtocolParser::readToken: Quoted string\n");
+        debug2("StreamProtocolParser::readToken: Quoted string\n");
         // quoted string
         if (!quote)
         {
@@ -570,13 +589,13 @@ Each time newline is read, line is incremented.
     }
     else if (strchr (specialchars, c))
     {
-        debug("StreamProtocolParser::readToken: Special '%c'\n", c);
+        debug2("StreamProtocolParser::readToken: Special '%c'\n", c);
         // a single character
         buffer.append(c);
         return true;
     }
     // a word or (variable name)
-    debug("StreamProtocolParser::readToken: word\n");
+    debug2("StreamProtocolParser::readToken: word\n");
     while (1)
     {
         buffer.append(tolower(c));
@@ -587,7 +606,7 @@ Each time newline is read, line is incremented.
             break;
         }
     }
-    debug("StreamProtocolParser::readToken: word='%s' c='%c'\n",
+    debug2("StreamProtocolParser::readToken: word='%s' c='%c'\n",
         buffer(token), c);
     buffer.append('\0').append(&l, sizeof(l)); // append line number
     return true;
@@ -615,7 +634,7 @@ parseValue(StreamBuffer& buffer, bool lazy)
     {
         token = buffer.length(); // start of next token
         if (!readToken(buffer)) return false;
-        debug("StreamProtocolParser::parseValue:%d: %s\n",
+        debug2("StreamProtocolParser::parseValue:%d: %s\n",
             line, buffer.expand(token)());
         c = buffer[token];
         if (c == '$') // a variable
@@ -775,7 +794,7 @@ Protocol(const Protocol& p, StreamBuffer& name, int _line)
     parameter[0] = protocolname();
     for (i = 0; i < 9; i++)
     {
-        debug("StreamProtocolParser::Protocol::Protocol $%d=\"%s\"\n",
+        if (i) debug("StreamProtocolParser::Protocol::Protocol $%d=\"%s\"\n",
             i, parameter[i]);
         nextparameter = parameter[i] + strlen(parameter[i]) + 1;
         if (nextparameter > name.length() + parameter[0]) break;
@@ -928,7 +947,7 @@ getCommands(const char* handlername, StreamBuffer& code, Client* client)
     if (!pvar) return true;
     if (!pvar->value) return true;
     const char* source = pvar->value();
-    debug("StreamProtocolParser::Protocol::getCommands"
+    debug2("StreamProtocolParser::Protocol::getCommands"
         "(handlername=\"%s\", client=\"%s\"): source=%s\n",
             handlername, client->name(), pvar->value.expand()());
     if (!compileCommands(code, source, client))
@@ -945,15 +964,15 @@ getCommands(const char* handlername, StreamBuffer& code, Client* client)
             "in protocol '%s'\n", protocolname());
         return false;
     }
-    debug("commands %s: %s\n", handlername, pvar->value.expand()());
-    debug("compiled to: %s\n", code.expand()());
+    debug2("commands %s: %s\n", handlername, pvar->value.expand()());
+    debug2("compiled to: %s\n", code.expand()());
     return true;
 }
 
 bool StreamProtocolParser::Protocol::
 replaceVariable(StreamBuffer& buffer, const char* varname)
 {
-    debug("StreamProtocolParser::Protocol::replaceVariable %s\n", varname);
+    debug2("StreamProtocolParser::Protocol::replaceVariable %s\n", varname);
     bool quoted = false;
     if (*++varname == '"')
     {
@@ -1033,16 +1052,16 @@ compileNumber(unsigned long& number, const char*& source, unsigned long max)
     unsigned long n;
     StreamBuffer buffer;
 
-    debug("StreamProtocolParser::Protocol::compileNumber source=\"%s\"\n",
+    debug2("StreamProtocolParser::Protocol::compileNumber source=\"%s\"\n",
         source);
     while (*source == '$' || (*source >= '0' && *source <= '9'))
     {
-        debug("StreamProtocolParser::Protocol::compileNumber *source=%u source=\"%s\"\n",
+        debug2("StreamProtocolParser::Protocol::compileNumber *source=%u source=\"%s\"\n",
             *source, source);
         if (*source == '$')
         {
             if (!replaceVariable(buffer, source)) return false;
-            debug("buffer=%s\n", buffer.expand()());
+            debug2("buffer=%s\n", buffer.expand()());
             buffer.truncate(-1-(int)sizeof(int));
         }
         else
@@ -1077,7 +1096,7 @@ compileNumber(unsigned long& number, const char*& source, unsigned long max)
         return false;
     }
     number = n;
-    debug("StreamProtocolParser::Protocol::compileNumber %s = %ld\n",
+    debug2("StreamProtocolParser::Protocol::compileNumber %s = %ld\n",
         buffer(), n);
     return true;
 }
@@ -1095,7 +1114,7 @@ compileString(StreamBuffer& buffer, const char*& source,
     size_t formatpos = buffer.length();
     line = getLineNumber(source);
 
-    debug("StreamProtocolParser::Protocol::compileString "
+    debug2("StreamProtocolParser::Protocol::compileString "
         "line %d source=\"%s\" formatType=%s quoted=%i recursionDepth=%d\n",
         line, source, ::toStr(formatType), quoted, recursionDepth);
 
@@ -1110,7 +1129,7 @@ compileString(StreamBuffer& buffer, const char*& source,
         // this is step 2: replacing the formats
         if (!*source || (newline = getLineNumber(source)) != line)
         {
-            debug("StreamProtocolParser::Protocol::compileString line %i: %s\n", line, buffer.expand()());
+            debug2("StreamProtocolParser::Protocol::compileString line %i: %s\n", line, buffer.expand()());
             // compile all formats in this line
             // We do this here after all variables in this line
             // have been replaced and after string has been coded.
@@ -1133,7 +1152,7 @@ compileString(StreamBuffer& buffer, const char*& source,
                             formatpos+=2;
                             continue;
                         }
-                        debug("StreamProtocolParser::Protocol::compileString "
+                        debug2("StreamProtocolParser::Protocol::compileString "
                             "format=\"%s\"\n", buffer.expand(formatpos)());
                         nformats++;
                         formatbuffer.clear();
@@ -1150,14 +1169,14 @@ compileString(StreamBuffer& buffer, const char*& source,
                         }
                         size_t formatlen = p - buffer(formatpos);
                         buffer.replace(formatpos, formatlen, formatbuffer);
-                        debug("StreamProtocolParser::Protocol::compileString "
+                        debug2("StreamProtocolParser::Protocol::compileString "
                             "replaced by: \"%s\"\n", buffer.expand(formatpos)());
                         formatpos += formatbuffer.length();
                         continue;
                     }
                     formatpos ++;
                 }
-                debug("StreamProtocolParser::Protocol::compileString "
+                debug2("StreamProtocolParser::Protocol::compileString "
                     "%d formats found in line %d\n", nformats, line);
             }
             if (!*source) break;
@@ -1400,7 +1419,7 @@ compileString(StreamBuffer& buffer, const char*& source,
             "Unexpected '%s' in string\n", source);
         return false;
     }
-    debug("StreamProtocolParser::Protocol::compileString buffer=%s\n", buffer.expand()());
+    debug2("StreamProtocolParser::Protocol::compileString buffer=%s\n", buffer.expand()());
     return true;
 }
 
@@ -1446,7 +1465,7 @@ compileFormat(StreamBuffer& buffer, const char*& formatstr,
         // add fieldname for debug purpose
         fieldname=buffer.length();
         buffer.append(source, fieldnameEnd - source).append(eos);
-        debug("StreamProtocolParser::Protocol::compileFormat: fieldname='%s'\n",
+        debug2("StreamProtocolParser::Protocol::compileFormat: fieldname='%s'\n",
             buffer(fieldname));
         StreamBuffer fieldAddress;
         if (!client->getFieldAddress(buffer(fieldname), fieldAddress))
@@ -1507,14 +1526,14 @@ compileFormat(StreamBuffer& buffer, const char*& formatstr,
     // add formatstr for debug purpose
     buffer.append(formatstart, source-formatstart).append(eos);
 
-    debug("StreamProtocolParser::Protocol::compileFormat: formatstring=\"%s\"\n",
+    debug2("StreamProtocolParser::Protocol::compileFormat: formatstring=\"%s\"\n",
         StreamBuffer(formatstart, source-formatstart).expand()());
 
     // add streamFormat structure and info
     buffer.append(&streamFormat, sizeof(streamFormat));
     buffer.append(infoString);
 
-    debug("StreamProtocolParser::Protocol::compileFormat: format.type=%s, "
+    debug2("StreamProtocolParser::Protocol::compileFormat: format.type=%s, "
         "infolen=%ld infostring=\"%s\"\n",
         StreamFormatTypeStr[streamFormat.type],
         streamFormat.infolen, infoString.expand()());

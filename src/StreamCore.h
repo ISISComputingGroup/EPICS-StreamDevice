@@ -73,7 +73,7 @@ void acceptEvent(unsigned short mask, unsigned short timeout)
 ***************************************/
 
 #include "MacroMagic.h"
-
+#include "time.h"
 
 // Flags: 0x00FFFFFF reserved for StreamCore
 const unsigned long None             = 0x0000;
@@ -94,6 +94,9 @@ const unsigned long BusPending       = LockPending|WritePending|WaitPending;
 const unsigned long ClearOnStart     = InitRun|AsyncMode|GotValue|Aborted|
                                        BusOwner|Separator|ScanTried|
                                        AcceptInput|AcceptEvent|BusPending;
+
+// The amount of time to wait before printing duplicated messages
+extern int streamErrorDeadTime;
 
 struct StreamFormat;
 
@@ -173,6 +176,11 @@ protected:
     ProtocolResult runningHandler;
     StreamBuffer fieldAddress;
 
+    // Keep track of errors to reduce logging frequencies
+    ProtocolResult previousResult;
+    time_t lastErrorTime;
+    int numberOfErrors;
+
     StreamIoStatus lastInputStatus;
     bool unparsedInput;
 
@@ -234,6 +242,7 @@ public:
 
 private:
     char* printCommands(StreamBuffer& buffer, const char* c);
+    bool  checkShouldPrint(ProtocolResult newErrorType);
 };
 
 #endif

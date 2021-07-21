@@ -25,3 +25,5 @@
 *.class binary
 *.vi binary
 
+GNUmakefile export-ignore
+.VERSION export-subst

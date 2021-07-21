@@ -20,7 +20,6 @@
 * along with StreamDevice. If not, see https://www.gnu.org/licenses/.
 *************************************************************************/
 
-#include <stdio.h>
 #include "epicsString.h"
 #include "aaoRecord.h"
 #include "devStream.h"
@@ -200,10 +199,10 @@ static long writeData(dbCommon *record, format_t *format)
                         break;
 #ifdef DBR_INT64
                     case DBF_INT64:
-                        dval = ((epicsInt64 *)aao->bptr)[nowd];
+                        dval = (double)((epicsInt64 *)aao->bptr)[nowd];
                         break;
                     case DBF_UINT64:
-                        dval = ((epicsUInt64 *)aao->bptr)[nowd];
+                        dval = (double)((epicsUInt64 *)aao->bptr)[nowd];
                         break;
 #endif
                     case DBF_LONG:
@@ -243,10 +242,10 @@ static long writeData(dbCommon *record, format_t *format)
                 {
 #ifdef DBR_INT64
                     case DBF_INT64:
-                        lval = ((epicsInt64 *)aao->bptr)[nowd];
+                        lval = (long)((epicsInt64 *)aao->bptr)[nowd];
                         break;
                     case DBF_UINT64:
-                        lval = ((epicsUInt64 *)aao->bptr)[nowd];
+                        lval = (long)((epicsUInt64 *)aao->bptr)[nowd];
                         break;
 #endif
                     case DBF_LONG:

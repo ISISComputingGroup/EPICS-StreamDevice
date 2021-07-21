@@ -20,14 +20,17 @@
 * along with StreamDevice. If not, see https://www.gnu.org/licenses/.
 *************************************************************************/
 
-#include "StreamFormatConverter.h"
-#include "StreamError.h"
-#include <ctype.h>
-#if defined(__vxworks) || defined(vxWorks)
+#if defined(vxWorks)
+#include <version.h>
+#if defined(_WRS_VXWORKS_MAJOR) && _WRS_VXWORKS_MAJOR > 6 || (_WRS_VXWORKS_MAJOR == 6 && _WRS_VXWORKS_MINOR > 8)
+#include <stdint.h>
+#define PRIX32 "X"
+#define PRIu32 "u"
+#else
 #define PRIX32 "lX"
 #define PRIu32 "lu"
+#endif
 #define PRIX8  "X"
-#define SCNx8  "hhx"
 #define uint_fast8_t uint8_t
 #define int_fast8_t int8_t
 #elif defined(_MSC_VER) && _MSC_VER < 1700 /* Visual Studio 2010 does not have inttypes.h */
@@ -35,29 +38,25 @@
 #define PRIX32 "X"
 #define PRIu32 "u"
 #define PRIX8  "X"
-#define SCNx8  "hhx"
 #else
 #define __STDC_FORMAT_MACROS
 #include <stdint.h>
 #include <inttypes.h>
 #endif
+#include <ctype.h>
 
-#if defined(__vxworks) || defined(vxWorks) || defined(_WIN32) || defined(__rtems__)
+#if defined(vxWorks) || defined(_WIN32) || defined(__rtems__)
 // These systems have no strncasecmp
-#include "epicsVersion.h"
-#ifdef BASE_VERSION
-// 3.13
 static int strncasecmp(const char *s1, const char *s2, size_t n)
 {
     int r=0;
     while (n && (r = toupper(*s1)-toupper(*s2)) == 0) { n--; s1++; s2++; };
     return r;
 }
-#else
-#include "epicsString.h"
-#define strncasecmp epicsStrnCaseCmp
 #endif
-#endif
+
+#include "StreamFormatConverter.h"
+#include "StreamError.h"
 
 typedef uint32_t (*checksumFunc)(const uint8_t* data, size_t len,  uint32_t init);
 
@@ -517,6 +516,58 @@ static uint32_t brksCryo(const uint8_t* data, size_t len, uint32_t sum)
     return xsum;
 }
 
+// Longitudinal Redundancy Check
+static uint32_t lrc(const uint8_t* data, size_t len, uint32_t sum)
+{
+    while (len--) {
+        sum = (sum + (*data++)) & 0xFF;
+    }
+
+    sum = ((sum ^ 0xFF) + 1) & 0xFF;
+
+    return sum;
+}
+
+// Longitudinal Redundancy Check using ASCII representation of numbers, 2-by-2
+static uint32_t hexlrc(const uint8_t* data, size_t len, uint32_t sum)
+{
+    uint32_t d;
+    uint32_t final_digit = 0;
+
+    while (len--)
+    {
+        d = toupper(*data++);
+
+        // Convert all hex digits, ignore all other bytes
+        if (isxdigit(d))
+        {
+            // Convert digits from ASCII to number
+            if (isdigit(d)) {
+                d -= '0';
+            }
+            else {
+                d -= 'A' - 0x0A;
+            }
+
+            // For the most significant bits, shift 4 bits
+            if (len % 2) {
+                final_digit = d << 4;
+            // Least significant bits are summed to previous converted digit
+            } else {
+                d += final_digit;
+                final_digit = 0;
+                // Apply lrc rule
+                sum = (sum + d) & 0xFF;
+            }
+        }
+    }
+
+    // Apply lrc rule
+    sum = ((sum ^ 0xFF) + 1) & 0xFF;
+
+    return sum;
+}
+
 static uint32_t julich(const uint8_t* data, size_t len, uint32_t sum)
 {
 	int original_len = len;
@@ -581,7 +632,6 @@ static uint32_t skf_modbus(const uint8_t* data, size_t len, uint32_t sum)
     return crc; 
 }
 
-
 struct checksum
 {
     const char* name;
@@ -625,6 +675,8 @@ static checksum checksumMap[] =
     {"cpi",     CPI,              0x00,       0x00,       1}, // 0x7E
     {"leybold", leybold,          0x00,       0x00,       1}, // 0x22
     {"brksCryo",brksCryo,         0x00,       0x00,       1}, // 0x4A
+    {"lrc",     lrc,              0x00,       0x00,       1}, // 0x23 
+    {"hexlrc",  hexlrc,           0x00,       0x00,       1}, // 0xA7
 	{"julich",  julich,           0x00,       0x00,       2}, // 0x2D
 	{"skf_modbus",  skf_modbus,   0x00,       0x00,       2}  // 0x374B
 };
@@ -813,7 +865,7 @@ scanPseudo(const StreamFormat& format, StreamBuffer& input, size_t& cursor)
     debug("ChecksumConverter %s: input checksum is 0x%0*" PRIX32 "\n",
         checksumMap[fnum].name, 2*checksumMap[fnum].bytes, sum);
 
-    uint_fast8_t inchar;
+    unsigned int inchar;
 
     if (format.flags & sign_flag) // decimal
     {
@@ -840,7 +892,7 @@ scanPseudo(const StreamFormat& format, StreamBuffer& input, size_t& cursor)
         {
             if (format.flags & zero_flag) // ASCII
             {
-                if (sscanf(input(cursor+2*i), "%2" SCNx8, (int8_t *) &inchar) != 1)
+                if (sscanf(input(cursor+2*i), "%2x", &inchar) != 1)
                 {
                     debug("ChecksumConverter %s: Input byte '%s' is not a hex byte\n",
                         checksumMap[fnum].name, input.expand(cursor+2*i,2)());
@@ -884,7 +936,7 @@ scanPseudo(const StreamFormat& format, StreamBuffer& input, size_t& cursor)
         {
             if (format.flags & zero_flag) // ASCII
             {
-                sscanf(input(cursor+2*i), "%2" SCNx8, (int8_t *) &inchar);
+                sscanf(input(cursor+2*i), "%2x", &inchar);
             }
             else
             if (format.flags & left_flag) // poor man's hex: 0x30 - 0x3F

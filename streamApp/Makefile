@@ -21,16 +21,8 @@
 # along with StreamDevice. If not, see https://www.gnu.org/licenses/.
 #########################################################################/
 
-TOP = ../..
-ifneq ($(wildcard ../../configure),)
-  include $(TOP)/configure/CONFIG
-else ifneq ($(wildcard ../../config),)
-  include $(TOP)/config/CONFIG_APP
-  include $(TOP)/config/RULES_ARCHS
-else
-  TOP= ..
-  include $(TOP)/configure/CONFIG
-endif
+TOP= ..
+include $(TOP)/configure/CONFIG
 
 PROD = streamApp
 DBD  = streamApp.dbd
@@ -66,6 +58,10 @@ PROD_LIBS += calc
 ifneq ($(words $(SSCAN) $(SYNAPPS)), 0)
 PROD_LIBS += sscan
 endif
+endif
+
+ifneq ($(words $(SNCSEQ) $(SYNAPPS)), 0)
+PROD_LIBS += seq pv
 endif
 
 streamApp_DBD += stream.dbd

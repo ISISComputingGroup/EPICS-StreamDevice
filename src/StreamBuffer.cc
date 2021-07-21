@@ -25,9 +25,6 @@
 #define _BSD_SOURCE
 #endif
 
-#include "StreamBuffer.h"
-#include "StreamError.h"
-
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -40,6 +37,7 @@
 
 #include <vxWorks.h>
 #include <fioLib.h>
+#include <string.h>
 
 struct outStr_s {
     char *str;
@@ -73,6 +71,9 @@ int vsnprintf(char *str, size_t size, const char *format, va_list ap) {
 }
 #endif // ! _WRS_VXWORKS_MAJOR
 #endif // vxWorks
+
+#include "StreamBuffer.h"
+#include "StreamError.h"
 
 #define P PRINTF_SIZE_T_PREFIX
 
@@ -341,7 +342,10 @@ StreamBuffer StreamBuffer::expand(ssize_t start, ssize_t length) const
     {
         c = buffer[i];
         if (c < 0x20 || c >= 0x7f)
-            result.print("\033[7m<%02x>\033[27m", c & 0xff);
+            result.print("%s<%02x>%s",
+                         ansiEscape(ANSI_REVERSE_VIDEO),
+                         c & 0xff,
+                         ansiEscape(ANSI_NOT_REVERSE_VIDEO));
         else
             result.append(c);
     }
@@ -354,18 +358,21 @@ dump() const
     StreamBuffer result;
     size_t i;
     result.print("%" P "d,%" P "d,%" P "d:", offs, len, cap);
-    if (offs) result.print("\033[47m");
+    if (offs) result.print(ansiEscape(ANSI_BG_WHITE));
     char c;
     for (i = 0; i < cap; i++)
     {
         c = buffer[i];
-        if (offs && i == offs) result.append("\033[0m");
+        if (offs && i == offs) result.append(ansiEscape(ANSI_RESET));
         if (c < 0x20 || c >= 0x7f)
-            result.print("\033[7m<%02x>\033[27m", c & 0xff);
+            result.print("%s<%02x>%s",
+                         ansiEscape(ANSI_REVERSE_VIDEO),
+                         c & 0xff,
+                         ansiEscape(ANSI_NOT_REVERSE_VIDEO));
         else
             result.append(c);
-        if (i == offs+len-1) result.append("\033[47m");
+        if (i == offs+len-1) result.append(ansiEscape(ANSI_BG_WHITE));
     }
-    result.append("\033[0m");
+    result.append(ansiEscape(ANSI_RESET));
     return result;
 }
