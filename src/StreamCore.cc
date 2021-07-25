@@ -1115,10 +1115,12 @@ readCallback(StreamIoStatus status,
         }
         else
         {
-            if (checkShouldPrint(ReadTimeout)) {
-                error("%s: Timeout after reading %" Z "d byte%s \"%s%s\"\n",
-                    name(), end, end==1 ? "" : "s", end > 20 ? "..." : "",
-                    inputBuffer.expand(-20)());
+			if (!inputBuffer.startswith(previousMismatch())) {
+                if (checkShouldPrint(ReadTimeout)) {
+                    error("%s: Timeout after reading %" Z "d byte%s \"%s%s\"\n",
+                        name(), end, end==1 ? "" : "s", end > 20 ? "..." : "",
+                        inputBuffer.expand(-20)());
+                }
             }
         }
     }
