@@ -20,12 +20,15 @@
 * along with StreamDevice. If not, see https://www.gnu.org/licenses/.
 *************************************************************************/
 
-#include "StreamCore.h"
-#include "StreamError.h"
 #include <ctype.h>
 #include <stdlib.h>
 
+#include "StreamCore.h"
+#include "StreamError.h"
+
 #define Z PRINTF_SIZE_T_PREFIX
+
+int streamErrorDeadTime = 0;
 
 /// debug functions /////////////////////////////////////////////
 
@@ -72,9 +75,9 @@ printCommands(StreamBuffer& buffer, const char* c)
                 buffer.append("    disconnect;\n");
                 break;
             default:
-                buffer.append("\033[31;1mGARBAGE: ");
+                buffer.append(ansiEscape(ANSI_RED_BOLD)).append("GARBAGE: ");
                 c = StreamProtocolParser::printString(buffer, c-1);
-                buffer.append("\033[0m\n");
+                buffer.append(ansiEscape(ANSI_RESET)).append("\n");
         }
     }
 }
@@ -122,12 +125,11 @@ printProtocol(FILE* file)
 StreamCore* StreamCore::first = NULL;
 
 StreamCore::
-StreamCore() : activeCommand(end)
+StreamCore() : StreamBusInterface::Client(),
+    next(), streamname(), flags(None), inTerminatorDefined(), outTerminatorDefined(),
+    activeCommand(end), previousResult(Success), numberOfErrors(0), unparsedInput()
 {
     businterface = NULL;
-    flags = None;
-    next = NULL;
-    unparsedInput = false;
     // add myself to list of streams
     StreamCore** pstream;
     for (pstream = &first; *pstream; pstream = &(*pstream)->next);
@@ -187,9 +189,12 @@ bool StreamCore::
 parse(const char* filename, const char* _protocolname)
 {
     protocolname = _protocolname;
-    // extract substitutions from protocolname "name(sub1,sub2)"
+    // extract substitutions from protocolname "name ( sub1, sub2 ) "
     ssize_t i = protocolname.find('(');
-    if (i >= 0)
+    if (i < 0) i = 0;
+    while (protocolname[i-1] == ' ')
+        protocolname.remove(--i, 1);
+    if (protocolname[i] == '(')
     {
         while (i < (ssize_t)protocolname.length())
         {
@@ -486,6 +491,8 @@ finishProtocol(ProtocolResult status)
         switch (status)
         {
             case Success:
+                previousResult = Success;
+                numberOfErrors = 0;
                 handler = NULL;
                 break;
             case WriteTimeout:
@@ -988,8 +995,10 @@ readCallback(StreamIoStatus status,
                 evalIn();
                 return 0;
             }
-            error("%s: No reply within %ld ms to \"%s\"\n",
-                name(), replyTimeout, outputLine.expand()());
+            if (checkShouldPrint(ReplyTimeout)) {
+                error("%s: No reply within %ld ms to \"%s\"\n",
+                    name(), replyTimeout, outputLine.expand()());
+            }
             inputBuffer.clear();
             finishProtocol(ReplyTimeout);
             return 0;
@@ -1106,13 +1115,13 @@ readCallback(StreamIoStatus status,
         }
         else
         {
-			// Don't continually print errors if we keen having the same mismatch
-			if (!inputBuffer.startswith(previousMismatch()))
-			{
-                error("%s: Timeout after reading %" Z "d byte%s \"%s%s\"\n",
-                    name(), end, end==1 ? "" : "s", end > 20 ? "..." : "",
-                    inputBuffer.expand(-20)());
-			}
+			if (!inputBuffer.startswith(previousMismatch())) {
+                if (checkShouldPrint(ReadTimeout)) {
+                    error("%s: Timeout after reading %" Z "d byte%s \"%s%s\"\n",
+                        name(), end, end==1 ? "" : "s", end > 20 ? "..." : "",
+                        inputBuffer.expand(-20)());
+                }
+            }
         }
     }
 
@@ -1836,6 +1845,39 @@ license(void)
         "\n"
         "You should have received a copy of the GNU Lesser General Public License\n"
         "along with StreamDevice. If not, see https://www.gnu.org/licenses/.\n";
+}
+
+/**
+ * \brief Checks whether an error message should be printed based on the new error type.
+ *
+ * Will check based on the error type and the time since last error of the same type
+ * whether to print the new error. Also has a number of side effects such as counting
+ * up errors of each type and resetting the time since last error.
+ *
+ * \param[in] newErrorType the type of the new error
+ * \return true if the error should be preinted, else false
+ */
+bool  StreamCore::checkShouldPrint(ProtocolResult newErrorType)
+{
+    if (previousResult != newErrorType) {
+        previousResult = newErrorType;
+        numberOfErrors = 0;
+        time(&lastErrorTime);
+        return true;
+    }
+    else if ((int)(time(NULL) - lastErrorTime) > streamErrorDeadTime) {
+        time(&lastErrorTime);
+        if (numberOfErrors != 0) {
+            error("%s: %i additional errors of the following type seen in the last %i seconds\n",
+                name(), numberOfErrors, streamErrorDeadTime);
+        }
+        numberOfErrors = 0;
+        return true;
+    }
+    else {
+        numberOfErrors++;
+        return false;
+    }
 }
 
 #include "streamReferences"

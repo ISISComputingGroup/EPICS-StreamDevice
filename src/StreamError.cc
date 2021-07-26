@@ -20,18 +20,25 @@
 * along with StreamDevice. If not, see https://www.gnu.org/licenses/.
 *************************************************************************/
 
-#include "StreamError.h"
-#ifdef _WIN32
-#include <windows.h>
-#endif
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
-#include <errlog.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#else
+#include <unistd.h>
+#endif /* _WIN32 */
+
+#include "StreamError.h"
 
 int streamDebug = 0;
 int streamError = 1;
 FILE *StreamDebugFile = NULL;
+
+/*0: disable timestamps on stream messages (both debug and error)*/
+int streamMsgTimeStamped = 1;
 
 #ifndef va_copy
 #ifdef __va_copy
@@ -47,18 +54,36 @@ FILE *StreamDebugFile = NULL;
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #endif
 
-/* Enable ANSI colors in Windows console */
-static int win_console_init() {
-	DWORD dwMode = 0;
-    HANDLE hCons = GetStdHandle(STD_ERROR_HANDLE);
-	GetConsoleMode(hCons, &dwMode);
-	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-	SetConsoleMode(hCons, dwMode);
-	return 0;
+/* Enable ANSI color support in Windows console */
+static bool win_console_init() {
+    HANDLE hCons[] = { GetStdHandle(STD_ERROR_HANDLE),
+                       GetStdHandle(STD_OUTPUT_HANDLE) };
+    for(int i=0; i < sizeof(hCons) / sizeof(HANDLE); ++i)
+    {
+        DWORD dwMode = 0;
+        if (hCons[i] == NULL ||
+            hCons[i] == INVALID_HANDLE_VALUE ||
+            !GetConsoleMode(hCons[i], &dwMode))
+        {
+            return false;
+        }
+        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        if (!SetConsoleMode(hCons[i], dwMode))
+        {
+            return false;
+        }
+    }
+    return true;
 }
-static int s = win_console_init();
 
-#endif
+/* do isatty() call second as always want to run win_console_init() */
+int streamDebugColored = win_console_init() && _isatty(_fileno(stderr));
+
+#else
+
+int streamDebugColored = isatty(fileno(stderr));
+
+#endif /* _WIN32 */
 
 /* You can globally change the printTimestamp function
    by setting the StreamPrintTimestampFunction variable
@@ -74,6 +99,7 @@ static void printTimestamp(char* buffer, size_t size)
 }
 
 void (*StreamPrintTimestampFunction)(char* buffer, size_t size) = printTimestamp;
+const char* (*StreamGetThreadNameFunction)(void) = NULL;
 
 void StreamError(const char* fmt, ...)
 {
@@ -93,47 +119,84 @@ void StreamError(int line, const char* file, const char* fmt, ...)
 
 void StreamVError(int line, const char* file, const char* fmt, va_list args)
 {
-    char timestamp[40];
     if (!(streamError || streamDebug)) return; // Error logging disabled
-    StreamPrintTimestampFunction(timestamp, 40);
+    char timestamp[40];
+    const char *threadname = NULL;
+    int timeStamped = streamMsgTimeStamped;
+    if (timeStamped)
+    {
+        StreamPrintTimestampFunction(timestamp, sizeof(timestamp));
+    }
+    if (StreamGetThreadNameFunction)
+    {
+        threadname = StreamGetThreadNameFunction();
+    }
 #ifdef va_copy
     if (StreamDebugFile)
     {
         va_list args2;
         va_copy(args2, args);
-        fprintf(StreamDebugFile, "%s ", timestamp);
+        if (timeStamped)
+        {
+            fprintf(StreamDebugFile, "%s ", timestamp);
+        }
+        if (threadname)
+        {
+            fprintf(StreamDebugFile, "%s ", threadname);
+        }
         vfprintf(StreamDebugFile, fmt, args2);
         fflush(StreamDebugFile);
         va_end(args2);
     }
 #endif
-//    fprintf(stderr, "\033[31;1m");
-//    fprintf(stderr, "%s ", timestamp);
-    errlogPrintf("%s ", timestamp);
+    fprintf(stderr, "%s", ansiEscape(ANSI_RED_BOLD));
+    if (timeStamped)
+    {
+        fprintf(stderr, "%s ", timestamp);
+    }
+    if (threadname)
+    {
+        fprintf(stderr, "%s ", threadname);
+    }
     if (file)
     {
-//        fprintf(stderr, "%s line %d: ", file, line);
-        errlogPrintf("%s line %d: ", file, line);
+        fprintf(stderr, "%s line %d: ", file, line);
     }
-//    vfprintf(stderr, fmt, args);
-//    fprintf(stderr, "\033[0m");
-    errlogVprintf(fmt, args);
+    vfprintf(stderr, fmt, args);
+    fprintf(stderr, "%s", ansiEscape(ANSI_RESET));
 }
 
 int StreamDebugClass::
 print(const char* fmt, ...)
 {
     va_list args;
-    char timestamp[40];
-    StreamPrintTimestampFunction(timestamp, 40);
     va_start(args, fmt);
     const char* f = strrchr(file, '/');
     if (f) f++; else f = file;
     FILE* fp = StreamDebugFile ? StreamDebugFile : stderr;
-    fprintf(fp, "%s ", timestamp);
+    if (streamMsgTimeStamped)
+    {
+        char timestamp[40];
+        StreamPrintTimestampFunction(timestamp, sizeof(timestamp));
+        fprintf(fp, "%s ", timestamp);
+    }
+    if (StreamGetThreadNameFunction)
+    {
+        fprintf(fp, "%s ", StreamGetThreadNameFunction());
+    }
     fprintf(fp, "%s:%d: ", f, line);
     vfprintf(fp, fmt, args);
     fflush(fp);
     va_end(args);
     return 1;
+}
+
+/**
+ * Return an ANSI escape code if coloured debug output is enabled
+ */
+const char* ansiEscape(AnsiMode mode)
+{
+    static const char* AnsiEscapes[] = { "\033[7m", "\033[27m", "\033[47m",
+                                         "\033[0m", "\033[31;1m" };
+    return streamDebugColored ? AnsiEscapes[mode] : "";
 }

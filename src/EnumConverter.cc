@@ -20,10 +20,11 @@
 * along with StreamDevice. If not, see https://www.gnu.org/licenses/.
 *************************************************************************/
 
+#include <stdlib.h>
+
 #include "StreamFormatConverter.h"
 #include "StreamError.h"
 #include "StreamProtocol.h"
-#include <stdlib.h>
 
 // Enum %{string0|string1|...}
 
@@ -76,7 +77,7 @@ parse(const StreamFormat& fmt, StreamBuffer& info,
                 numEnums = -(numEnums+1);
                 info.append('\0');
                 memcpy(info(n), &numEnums, sizeof(numEnums));
-                debug("EnumConverter::parse %ld choices with default: %s\n",
+                debug2("EnumConverter::parse %ld choices with default: %s\n",
                     -numEnums, info.expand()());
                 return enum_format;
             }
@@ -99,7 +100,7 @@ parse(const StreamFormat& fmt, StreamBuffer& info,
             if (*source++ == '}')
             {
                 memcpy(info(n), &numEnums, sizeof(numEnums));
-                debug("EnumConverter::parse %ld choices: %s\n",
+                debug2("EnumConverter::parse %ld choices: %s\n",
                     numEnums, info.expand()());
                 return enum_format;
             }

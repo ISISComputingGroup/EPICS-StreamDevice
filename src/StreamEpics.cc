@@ -21,8 +21,15 @@
 *************************************************************************/
 
 #include <errno.h>
-#include "StreamCore.h"
-#include "StreamError.h"
+#include <ctype.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+
+#if defined(vxWorks)
+#include <symLib.h>
+#include <sysSymTbl.h>
+#endif
 
 #include "epicsVersion.h"
 #ifdef BASE_VERSION
@@ -30,10 +37,11 @@
 #endif
 
 #ifdef EPICS_3_13
+#include <semLib.h>
+#include <wdLib.h>
+#include <taskLib.h>
+
 extern "C" {
-
-static char* epicsStrDup(const char *s) { char* c = (char*)malloc(strlen(s)+1); strcpy(c, s); return c; }
-
 #endif
 
 #define epicsAlarmGLOBAL
@@ -45,18 +53,11 @@ static char* epicsStrDup(const char *s) { char* c = (char*)malloc(strlen(s)+1); 
 #include "recGbl.h"
 #include "devLib.h"
 #include "callback.h"
+#include "initHooks.h"
 
-#include <ctype.h>
-#include <stdarg.h>
-#include <stdlib.h>
 #ifdef EPICS_3_13
-
-#include <semLib.h>
-#include <wdLib.h>
-#include <taskLib.h>
-
+static char* epicsStrDup(const char *s) { char* c = (char*)malloc(strlen(s)+1); strcpy(c, s); return c; }
 extern DBBASE *pdbbase;
-
 } // extern "C"
 
 #else // !EPICS_3_13
@@ -71,28 +72,24 @@ extern DBBASE *pdbbase;
 #include "iocsh.h"
 #include "epicsExport.h"
 
-#if defined(VERSION_INT) || EPICS_MODIFICATION >= 11
-#include "initHooks.h"
-#define WITH_IOC_RUN
-#endif
-
 #if !defined(VERSION_INT) && EPICS_MODIFICATION < 9
 // iocshCmd() is missing in iocsh.h (up to R3.14.8.2)
-// To build with win32-x86, you MUST fix iocsh.h.
+// To build for Windows, you MUST fix iocsh.h.
 // Move the declaration below to iocsh.h and rebuild base.
 extern "C" epicsShareFunc int epicsShareAPI iocshCmd(const char *command);
 #endif
 
 #endif // !EPICS_3_13
 
-#if defined(__vxworks) || defined(vxWorks)
-#include <symLib.h>
-#include <sysSymTbl.h>
-#endif
-
+#include "StreamCore.h"
+#include "StreamError.h"
 #include "devStream.h"
 
 #define Z PRINTF_SIZE_T_PREFIX
+
+#if defined(VERSION_INT) || EPICS_MODIFICATION >= 11
+#define WITH_IOC_RUN
+#endif
 
 // More flags: 0x00FFFFFF used by StreamCore
 const unsigned long InDestructor  = 0x0100000;
@@ -170,10 +167,7 @@ class Stream : protected StreamCore
     bool print(format_t *format, va_list ap);
     ssize_t scan(format_t *format, void* pvalue, size_t maxStringSize);
     bool process();
-
-#ifdef WITH_IOC_RUN
     static void initHook(initHookState);
-#endif
 
 // device support functions
     friend long streamInitRecord(dbCommon *record, const struct link *ioLink,
@@ -198,6 +192,9 @@ public:
 extern "C" { // needed for Windows
 epicsExportAddress(int, streamDebug);
 epicsExportAddress(int, streamError);
+epicsExportAddress(int, streamDebugColored);
+epicsExportAddress(int, streamErrorDeadTime);
+epicsExportAddress(int, streamMsgTimeStamped);
 }
 
 // for subroutine record
@@ -330,7 +327,6 @@ epicsExportAddress(drvet, stream);
 #ifdef EPICS_3_13
 void streamEpicsPrintTimestamp(char* buffer, size_t size)
 {
-    size_t tlen;
     char* c;
     TS_STAMP tm;
     tsLocalTime (&tm);
@@ -339,16 +335,17 @@ void streamEpicsPrintTimestamp(char* buffer, size_t size)
     if (c) {
         c[4] = 0;
     }
-    tlen = strlen(buffer);
-    sprintf(buffer+tlen, " %.*s", (int)(size-tlen-2), taskName(0));
+}
+
+static const char* epicsThreadGetNameSelf()
+{
+    return taskName(0);
 }
 #else // !EPICS_3_13
 void streamEpicsPrintTimestamp(char* buffer, size_t size)
 {
-    size_t tlen;
     epicsTime tm = epicsTime::getCurrent();
-    tlen = tm.strftime(buffer, size, "%Y/%m/%d %H:%M:%S.%06f");
-    sprintf(buffer+tlen, " %.*s", (int)(size-tlen-2), epicsThreadGetNameSelf());
+    tm.strftime(buffer, size, "%Y/%m/%d %H:%M:%S.%06f");
 }
 #endif // !EPICS_3_13
 
@@ -444,7 +441,7 @@ drvInit()
     char* path;
     debug("drvStreamInit()\n");
     path = getenv("STREAM_PROTOCOL_PATH");
-#if defined(__vxworks) || defined(vxWorks)
+#if defined(vxWorks)
     // for compatibility reasons look for global symbols
     if (!path)
     {
@@ -461,54 +458,87 @@ drvInit()
 #endif
     if (!path)
         fprintf(stderr,
-            "drvStreamInit: Warning! STREAM_PROTOCOL_PATH not set. "
-            "Defaults to \"%s\"\n", StreamProtocolParser::path);
+            "drvStreamInit: Warning! STREAM_PROTOCOL_PATH not set.\n");
     else
         StreamProtocolParser::path = path;
     debug("StreamProtocolParser::path = %s\n",
         StreamProtocolParser::path);
     StreamPrintTimestampFunction = streamEpicsPrintTimestamp;
-
-#ifdef WITH_IOC_RUN
+    StreamGetThreadNameFunction = epicsThreadGetNameSelf;
     initHookRegister(initHook);
-#endif
 
     return OK;
 }
 
-#ifdef WITH_IOC_RUN
 void Stream::
 initHook(initHookState state)
 {
     Stream* stream;
 
-    if (state == initHookAtIocRun)
-    {
-        debug("Stream::initHook(initHookAtIocRun) interruptAccept=%d\n", interruptAccept);
-
-        static int inIocInit = 1;
-        if (inIocInit)
+    switch (state) {
+#ifdef WITH_IOC_RUN
+        case initHookAtIocRun:
         {
-            // We don't want to run @init twice in iocInit
-            inIocInit = 0;
-            return;
-        }
-
-        for (stream = static_cast<Stream*>(first); stream;
-            stream = static_cast<Stream*>(stream->next))
-        {
-            if (!stream->onInit) continue;
-            debug("Stream::initHook(initHookAtIocRun) Re-inititializing %s\n", stream->name());
-            if (!stream->startProtocol(StartInit))
+            // re-run @init handlers after restart
+            static int inIocInit = 1;
+            if (inIocInit)
             {
-                error("%s: Re-initialization failed.\n",
-                    stream->name());
+                // We don't want to run @init twice in iocInit
+                inIocInit = 0;
+                return;
             }
-            stream->initDone.wait();
+
+            for (stream = static_cast<Stream*>(first); stream;
+                stream = static_cast<Stream*>(stream->next))
+            {
+                if (!stream->onInit) continue;
+                debug("%s: running @init handler\n", stream->name());
+                if (!stream->startProtocol(StartInit))
+                {
+                    error("%s: @init handler failed.\n",
+                        stream->name());
+                }
+                stream->initDone.wait();
+            }
+            break;
         }
+        case initHookAtIocPause:
+        {
+            // stop polling I/O Intr
+            for (stream = static_cast<Stream*>(first); stream;
+                stream = static_cast<Stream*>(stream->next))
+            {
+                if (stream->record->scan == SCAN_IO_EVENT) {
+                    debug("%s: stopping \"I/O Intr\"\n", stream->name());
+                    stream->finishProtocol(Stream::Abort);
+                }
+            }
+            break;
+        }
+        case initHookAfterIocRunning:
+#else
+        case initHookAfterInterruptAccept:
+#endif
+        {
+            // start polling I/O Intr
+            for (stream = static_cast<Stream*>(first); stream;
+                stream = static_cast<Stream*>(stream->next))
+            {
+                if (stream->record->scan == SCAN_IO_EVENT) {
+                    debug("%s: starting \"I/O Intr\"\n", stream->name());
+                    if (!stream->startProtocol(StartAsync))
+                    {
+                        error("%s: Can't start \"I/O Intr\" protocol\n",
+                            stream->name());
+                    }
+                }
+            }
+            break;
+        }
+        default:
+            break;
     }
 }
-#endif
 
 // device support (C interface) //////////////////////////////////////////
 
@@ -622,7 +652,16 @@ long streamGetIointInfo(int cmd, dbCommon *record, IOSCANPVT *ppvt)
     *ppvt = stream->ioscanpvt;
     if (cmd == 0)
     {
-        debug("streamGetIointInfo: starting protocol\n");
+#ifdef WITH_IOC_RUN
+        if (!interruptAccept) {
+            // We will start polling later in initHook.
+            debug("streamGetIointInfo(%s): start later...\n",
+                record->name);
+            return OK;
+        }
+#endif
+        debug("streamGetIointInfo(%s): start protocol\n",
+            record->name);
         // SCAN has been set to "I/O Intr"
         if (!stream->startProtocol(Stream::StartAsync))
         {
@@ -633,6 +672,8 @@ long streamGetIointInfo(int cmd, dbCommon *record, IOSCANPVT *ppvt)
     else
     {
         // SCAN is no longer "I/O Intr"
+        debug("streamGetIointInfo(%s): abort protocol\n",
+            record->name);
         stream->finishProtocol(Stream::Abort);
     }
     return OK;
@@ -1115,11 +1156,7 @@ getFieldAddress(const char* fieldname, StreamBuffer& address)
 }
 
 static const unsigned char dbfMapping[] =
-#ifdef xDBR_INT64
-    {0, DBF_UINT64, DBF_INT64, DBF_ENUM, DBF_DOUBLE, DBF_STRING};
-#else
     {0, DBF_ULONG, DBF_LONG, DBF_ENUM, DBF_DOUBLE, DBF_STRING};
-#endif
 
 bool Stream::
 formatValue(const StreamFormat& format, const void* fieldaddress)
