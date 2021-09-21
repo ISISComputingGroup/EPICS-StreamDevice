@@ -95,6 +95,7 @@ printProtocol(FILE* file)
     fprintf(file, "  writeTimeout  = %ld; # ms\n", writeTimeout);
     fprintf(file, "  pollPeriod    = %ld; # ms\n", pollPeriod);
     fprintf(file, "  maxInput      = %ld; # bytes\n", maxInput);
+    fprintf(file, "  maxRetries      = %ld;\n", maxRetries);
     StreamProtocolParser::printString(buffer.clear(), inTerminator());
     fprintf(file, "  inTerminator  = \"%s\";\n", buffer());
         StreamProtocolParser::printString(buffer.clear(), outTerminator());
@@ -257,6 +258,7 @@ compile(StreamProtocolParser::Protocol* protocol)
     replyTimeout = 1000;
     writeTimeout = 100;
     maxInput = 0;
+    maxRetries = 0;
     pollPeriod = 1000;
     inTerminatorDefined = false;
     outTerminatorDefined = false;
@@ -275,7 +277,8 @@ compile(StreamProtocolParser::Protocol* protocol)
         protocol->getNumberVariable("maxinput", maxInput) &&
         // use replyTimeout as default for pollPeriod
         protocol->getNumberVariable("replytimeout", pollPeriod) &&
-        protocol->getNumberVariable("pollperiod", pollPeriod)))
+        protocol->getNumberVariable("pollperiod", pollPeriod) &&
+        protocol->getNumberVariable("maxretries", maxRetries)))
         return false;
 
     if (!(protocol->getStringVariable("interminator", inTerminator, &inTerminatorDefined) &&
@@ -475,7 +478,8 @@ finishProtocol(ProtocolResult status)
         status = Fault;
     }
     activeCommand = end;
-
+    bool retrying = false;
+    
 ////    flags &= ~(AcceptInput|AcceptEvent);
     if (runningHandler || flags & InitRun)
     {
@@ -488,6 +492,7 @@ finishProtocol(ProtocolResult status)
         runningHandler = status;
         // look for error handler
         char* handler;
+        bool retry = false;
         switch (status)
         {
             case Success:
@@ -496,15 +501,19 @@ finishProtocol(ProtocolResult status)
                 handler = NULL;
                 break;
             case WriteTimeout:
+                retry = true;
                 handler = onWriteTimeout();
                 break;
             case ReplyTimeout:
+                retry = true;
                 handler = onReplyTimeout();
                 break;
             case ReadTimeout:
+                retry = true;
                 handler = onReadTimeout();
                 break;
             case ScanError:
+                retry = true;
                 handler = onMismatch();
                 /* reparse old input if first command in handler is 'in' */
                 if (*handler == in)
@@ -529,13 +538,19 @@ finishProtocol(ProtocolResult status)
                 inputBuffer.clear();
                 handler = NULL;
         }
-        if (handler)
-        {
-            debug("starting exception handler\n");
-            // execute handler
-            commandIndex = handler;
-            evalCommand();
-            return;
+        if (retry && currentRetryCount >= maxRetries) {
+            error("%s: Max retries (%d) exceeded\n", name(), maxRetries);
+        }
+        retrying = retry && currentRetryCount < maxRetries;
+        if (!retrying) {
+            currentRetryCount = 0;
+            if (handler) {
+                debug("starting exception handler\n");
+                // execute handler
+                commandIndex = handler;
+                evalCommand();
+                return;
+            }
         }
     }
     if (flags & BusOwner)
@@ -546,6 +561,13 @@ finishProtocol(ProtocolResult status)
     busFinish();
     flags &= ~(AcceptInput|AcceptEvent);
     protocolFinishHook(status);
+    if (retrying) {
+        currentRetryCount++;
+        error("%s: Retrying %d of %d attempts\n", name(), currentRetryCount, maxRetries);
+        // execute retry
+        startProtocol(StartNormal);
+        return;
+    }
 }
 
 bool StreamCore::

@@ -156,6 +156,8 @@ protected:
     unsigned long readTimeout;
     unsigned long pollPeriod;
     unsigned long maxInput;
+    unsigned long maxRetries;
+    unsigned long currentRetryCount;
     bool inTerminatorDefined;
     bool outTerminatorDefined;
     StreamBuffer inTerminator;
