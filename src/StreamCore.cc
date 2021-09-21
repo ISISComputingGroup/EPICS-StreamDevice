@@ -501,7 +501,6 @@ finishProtocol(ProtocolResult status)
                 handler = NULL;
                 break;
             case WriteTimeout:
-                retry = true;
                 handler = onWriteTimeout();
                 break;
             case ReplyTimeout:
@@ -509,11 +508,9 @@ finishProtocol(ProtocolResult status)
                 handler = onReplyTimeout();
                 break;
             case ReadTimeout:
-                retry = true;
                 handler = onReadTimeout();
                 break;
             case ScanError:
-                retry = true;
                 handler = onMismatch();
                 /* reparse old input if first command in handler is 'in' */
                 if (*handler == in)
