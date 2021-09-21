@@ -538,7 +538,7 @@ finishProtocol(ProtocolResult status)
                 inputBuffer.clear();
                 handler = NULL;
         }
-        if (retry && currentRetryCount >= maxRetries) {
+        if (retry && maxRetries > 0 && currentRetryCount >= maxRetries) {
             error("%s: Max retries (%d) exceeded\n", name(), maxRetries);
         }
         retrying = retry && currentRetryCount < maxRetries;
