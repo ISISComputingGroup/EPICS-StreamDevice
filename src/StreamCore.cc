@@ -565,7 +565,7 @@ finishProtocol(ProtocolResult status)
         startProtocol(StartNormal);
         return;
     } else if (!retrying && currentRetryCount > 0) {
-        error("%s: Success after %s retries", name(), currentRetryCount);
+        error("%s: Success after %d retries", name(), currentRetryCount);
         currentRetryCount = 0;
     }
 }
