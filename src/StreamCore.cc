@@ -540,7 +540,7 @@ finishProtocol(ProtocolResult status)
         }
         retrying = retry && currentRetryCount < maxRetries;
         if (!retrying) {
-            currentRetryCount = 0;
+            
             if (handler) {
                 debug("starting exception handler\n");
                 // execute handler
@@ -564,6 +564,9 @@ finishProtocol(ProtocolResult status)
         // execute retry
         startProtocol(StartNormal);
         return;
+    } else if (!retrying && currentRetryCount > 0) {
+        error("%s: Success after %s retries", name(), currentRetryCount);
+        currentRetryCount = 0;
     }
 }
 
