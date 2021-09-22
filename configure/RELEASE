@@ -20,7 +20,7 @@ SUPPORT=$(TOP)/..
 ASYN=$(SUPPORT)/asyn/master
 # uncommenting CALC adds support for sCalcout with stream
 # however it needs all our IOCs to include calcSupport.dbd before stream.dbd which is not the case 
-#CALC=$(SUPPORT)/calc/master
+CALC=$(SUPPORT)/calc/master
 PCRE=$(SUPPORT)/pcre/master
 SSCAN=$(SUPPORT)/sscan/master
 ONCRPC=$(SUPPORT)/oncrpc/master
