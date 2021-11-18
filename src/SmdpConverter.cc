@@ -40,9 +40,9 @@ const char ESC = '\x07', ESC_ESC = '2';
 
 class SmdpConverter : public StreamFormatConverter
 {
-    int parse (const StreamFormat&, StreamBuffer&, const char*&, bool);
-    bool printPseudo(const StreamFormat&, StreamBuffer&);
-    int scanPseudo(const StreamFormat&, StreamBuffer&, long& cursor);
+    int parse (const StreamFormat&, StreamBuffer&, const char*&, bool) override;
+    bool printPseudo(const StreamFormat&, StreamBuffer&) override;
+    ssize_t scanPseudo(const StreamFormat&, StreamBuffer&, size_t& cursor) override;
 };
 
 int SmdpConverter::
@@ -83,8 +83,8 @@ printPseudo(const StreamFormat& format, StreamBuffer& output)
     return true;
 }
 
-int SmdpConverter::
-scanPseudo(const StreamFormat& format, StreamBuffer& input, long& cursor)
+ssize_t SmdpConverter::
+scanPseudo(const StreamFormat& format, StreamBuffer& input, size_t& cursor)
 {
     int n;
     int start = (format.width < 1) ? 1 : format.width;
