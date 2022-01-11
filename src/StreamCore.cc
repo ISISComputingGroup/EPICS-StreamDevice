@@ -512,6 +512,7 @@ finishProtocol(ProtocolResult status)
                     debug("reparsing input \"%s\"\n",
                         inputLine.expand()());
                     commandIndex = handler + 1;
+                    previousMismatch = StreamBuffer();
                     if (matchInput())
                     {
                         evalCommand();
@@ -1165,10 +1166,9 @@ readCallback(StreamIoStatus status,
         return 0;
     }
 
-	if (previousMismatch)
+	if (previousMismatch && !(flags & AsyncMode))
 	{
-		error("%s: Match passed again\n",
-            name());
+		error("%s: Match passed again\n", name());
 	}
 
 	previousMismatch = StreamBuffer();
