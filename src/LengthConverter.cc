@@ -19,8 +19,10 @@ class LengthConverter : public StreamFormatConverter
     bool printPseudo(const StreamFormat &fmt, StreamBuffer &output);
     void convertBytesBigEndian(int width, char *tempArray, const size_t length);
     void convertBytesLittleEndian(int width, char *tempArray, const size_t length);
-
-    ssize_t scanPseudo(const StreamFormat& fmt, StreamBuffer& inputLine, size_t& cursor);
+    size_t convertBigLength(size_t width, StreamBuffer &inputLine);
+    size_t convertLittleLength(size_t width, StreamBuffer &inputLine);
+    ssize_t scanPseudo(const StreamFormat &fmt, StreamBuffer &inputLine, size_t &cursor);
+    
 };
 
 int LengthConverter::
@@ -71,14 +73,52 @@ void LengthConverter::convertBytesLittleEndian(int width, char *tempArray, const
     }
 }
 
+size_t LengthConverter::convertBigLength(size_t width, StreamBuffer &inputLine)
+{
+    size_t length=0, n;
+    for (int i = 0; i < width; i++)
+    {
+        size_t shift = (width - 1 - i) * 8;
+        n = int((unsigned char)(inputLine[i]) << shift);
+        length += n;
+    }
+    return length;
+}
+
+size_t LengthConverter::convertLittleLength(size_t width, StreamBuffer &inputLine)
+{
+    size_t length=0, n;
+    for (int i = 0; i < width; i++)
+    {
+        size_t shift = i * 8;
+        n = int((unsigned char)(inputLine[i]) << shift);
+        length += n;
+    }
+    return length;
+}
+
 ssize_t LengthConverter::
 scanPseudo(const StreamFormat& fmt, StreamBuffer& inputLine, size_t& cursor)
 {
+    size_t width;
     if(fmt.width == 0){
-        return 4;
+        width = 4;
     }else{
-        return fmt.width;
+        width = fmt.width;
     }
+    size_t length;
+
+    if (fmt.flags & alt_flag){
+        length = convertLittleLength(width, inputLine);
+    }else{
+        length = convertBigLength(width, inputLine);
+    }
+    if( inputLine.length() -width == length){
+        return width;
+    }
+    error("LengthConverter: expcted %u bytes but read %u.\n", length, inputLine.length()-width);
+    return -1;
 }
+
 
 RegisterConverter (LengthConverter, "l");
