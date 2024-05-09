@@ -17,8 +17,8 @@ class LengthConverter : public StreamFormatConverter
 {
     int parse(const StreamFormat&, StreamBuffer&, const char*&, bool);
     bool printPseudo(const StreamFormat &fmt, StreamBuffer &output);
-    void convertBytesBigEndian(int width, char *tempArray, const size_t length);
-    void convertBytesLittleEndian(int width, char *tempArray, const size_t length);
+    void convertBytesBigEndian(size_t width, char *tempArray, const size_t length);
+    void convertBytesLittleEndian(size_t width, char *tempArray, const size_t length);
     size_t convertBigLength(size_t width, StreamBuffer &inputLine);
     size_t convertLittleLength(size_t width, StreamBuffer &inputLine);
     ssize_t scanPseudo(const StreamFormat &fmt, StreamBuffer &inputLine, size_t &cursor);
@@ -35,7 +35,7 @@ bool LengthConverter::
 printPseudo(const StreamFormat& fmt, StreamBuffer& output)
 {
     const size_t length = output.length();
-    int n, width;
+    size_t width;
     if(fmt.width == 0){
         width = 4;
     }else{
@@ -47,26 +47,26 @@ printPseudo(const StreamFormat& fmt, StreamBuffer& output)
     }else{
         convertBytesBigEndian(width, tempArray, length);
     }
-    for (n = 0; n < length; n++){
-        tempArray[n+width]=output[n];
+    for (size_t i = 0; i < length; i++){
+        tempArray[i+width]=output[i];
     }
     output.set(tempArray, width+length);
     delete tempArray;
     return true;
 }
 
-void LengthConverter::convertBytesBigEndian(int width, char *tempArray, const size_t length)
+void LengthConverter::convertBytesBigEndian(size_t width, char *tempArray, const size_t length)
 {
-    for (int i = 0; i < width; i++)
+    for (size_t i = 0; i < width; i++)
     {
         size_t shift = (width - 1 - i) * 8;
         tempArray[i] = (length >> (shift)) & 0xFF;
     }
 }
 
-void LengthConverter::convertBytesLittleEndian(int width, char *tempArray, const size_t length)
+void LengthConverter::convertBytesLittleEndian(size_t width, char *tempArray, const size_t length)
 {
-    for (int i = 0; i < width; i++)
+    for (size_t i = 0; i < width; i++)
     {
         size_t shift = i * 8;
         tempArray[i] = (length >> (shift)) & 0xFF;
@@ -76,7 +76,7 @@ void LengthConverter::convertBytesLittleEndian(int width, char *tempArray, const
 size_t LengthConverter::convertBigLength(size_t width, StreamBuffer &inputLine)
 {
     size_t length=0, n;
-    for (int i = 0; i < width; i++)
+    for (size_t i = 0; i < width; i++)
     {
         size_t shift = (width - 1 - i) * 8;
         n = int((unsigned char)(inputLine[i]) << shift);
@@ -88,7 +88,7 @@ size_t LengthConverter::convertBigLength(size_t width, StreamBuffer &inputLine)
 size_t LengthConverter::convertLittleLength(size_t width, StreamBuffer &inputLine)
 {
     size_t length=0, n;
-    for (int i = 0; i < width; i++)
+    for (size_t i = 0; i < width; i++)
     {
         size_t shift = i * 8;
         n = int((unsigned char)(inputLine[i]) << shift);
