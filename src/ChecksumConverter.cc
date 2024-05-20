@@ -725,12 +725,12 @@ static checksum checksumMap[] =
     {"brksCryo",brksCryo,         0x00,       0x00,       1}, // 0x4A
     {"lrc",     lrc,              0x00,       0x00,       1}, // 0x23 
     {"hexlrc",  hexlrc,           0x00,       0x00,       1}, // 0xA7
-	{"julich",  julich,           0x00,       0x00,       2}, // 0x2D
-	{"skf_modbus",  skf_modbus,   0x00,       0x00,       2},  // 0x374B
     {"bitsum",  bitsum,           0x00,       0x00,       1}, // 0x21
     {"bitsum8", bitsum,           0x00,       0x00,       1}, // 0x21
     {"bitsum16",bitsum,           0x0000,     0x0000,     2}, // 0x0021
     {"bitsum32",bitsum,           0x00000000, 0x00000000, 4}, // 0x00000021
+    {"julich",  julich,           0x00,       0x00,       2}, // 0x2D
+    {"skf_modbus",  skf_modbus,   0x00,       0x00,       2}, // 0x374B
 };
 
 static uint32_t mask[5] = {0, 0xFF, 0xFFFF, 0xFFFFFF, 0xFFFFFFFF};
