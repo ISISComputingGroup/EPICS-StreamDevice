@@ -523,7 +523,7 @@ scanString(const StreamFormat& fmt, const char* input,
     {
         // normally whitespace ends string
         // but don't end if # flag is present
-        if (!(fmt.flags & alt_flag) && isspace(*input)) break;
+        if (!(fmt.flags & alt_flag) && isspace((unsigned char)*input)) break;
         if (space_left > 1)
         {
             *value++ = *input;
