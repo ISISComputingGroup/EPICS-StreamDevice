@@ -98,6 +98,15 @@ static uint32_t xor8(const uint8_t* data, size_t len, uint32_t sum)
     return sum;
 }
 
+// for ISO 1745 protocol used by M905 pressure transducer
+// it is a bit like leybold checksum in that it adds 32
+// if value is less than 32
+static uint32_t xor8p(const uint8_t* data, size_t len, uint32_t sum)
+{
+    sum = xor8(data, len, sum);
+    return sum < 32 ? sum + 32 : sum;
+}
+
 static uint32_t xor7(const uint8_t* data, size_t len, uint32_t sum)
 {
     return xor8(data, len, sum) & 0x7F;
@@ -704,6 +713,7 @@ static checksum checksumMap[] =
     {"xor",     xor8,             0x00,       0x00,       1}, // 0x31
     {"xor8",    xor8,             0x00,       0x00,       1}, // 0x31
     {"xor8ff",  xor8,             0x00,       0xFF,       1}, // 0xCE
+    {"xor8p",   xor8p,            0x00,       0x00,       1}, // 0x31
     {"xor7",    xor7,             0x00,       0x00,       1}, // 0x31
     {"crc8",    crc_0x07,         0x00,       0x00,       1}, // 0xF4
     {"ccitt8",  crc_0x31,         0x00,       0x00,       1}, // 0xA1
